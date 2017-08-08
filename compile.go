@@ -47,7 +47,7 @@ func (c *Command) Next() *Command {
 	return c.next
 }
 
-func (c *Command) nextFn() func(f text.Editor){
+func (c *Command) nextFn() func(f text.Editor) {
 	return c.next.fn
 }
 
