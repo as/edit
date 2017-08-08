@@ -7,25 +7,34 @@ import (
 	"regexp"
 )
 
+// Address implements Set on the Editor. Possibly selecting
+// some range of text (a dot).
 type Address interface {
+	// Set computes and sets the address on the provided Editor
 	Set(f text.Editor)
+	// Back returns true if the address semantics should be executed in reverse
 	Back() bool
 }
+// Regexp is an address computed by a regexp
 type Regexp struct {
 	re   *regexp.Regexp
 	back bool
 	rel  int
 }
+// Bytes is an address computed by a relative or absolute byte offset
 type Byte struct {
 	Q   int64
 	rel int
 }
+// Line is an address computed by a relative or absolute byte offset
 type Line struct {
 	Q   int64
 	rel int
 }
+// Dot is the current dot address
 type Dot struct {
 }
+// Compound combines two address values with an operator
 type Compound struct {
 	a0, a1 Address
 	op     byte
@@ -111,4 +120,5 @@ func (r *Line) Set(f text.Editor) {
 }
 
 func (Dot) Set(f text.Editor) {
+	// TODO
 }
