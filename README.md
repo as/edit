@@ -1,5 +1,6 @@
-# edit
-Edit is an implementation of the Acme/Sam command language
+
+# edit 
+Edit is an implementation of the Acme/Sam command language 
 
 # usage
 ```
@@ -19,3 +20,5 @@ See example/example.go
 
 # reference
 http://doc.cat-v.org/bell_labs/sam_lang_tutorial/
+
+[![Go Report Card](https://goreportcard.com/badge/github.com/as/edit)](https://goreportcard.com/report/github.com/as/edit)
