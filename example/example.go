@@ -13,7 +13,7 @@ import (
 	"github.com/as/text"
 )
 
-func init(){
+func init() {
 	log.SetFlags(0)
 	log.SetPrefix("example: ")
 }
@@ -33,7 +33,7 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 }
 
 func main() {
-	if len(os.Args) < 2{
+	if len(os.Args) < 2 {
 		log.Fatalln("usage: echo hello | example ,a,world,")
 	}
 	in, out := bufio.NewReader(os.Stdin), bufio.NewWriter(os.Stdout)

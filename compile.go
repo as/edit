@@ -10,6 +10,10 @@ var (
 	ErrNilFunc = errors.New("empty program")
 )
 
+var (
+	noop = func(ed text.Editor) {}
+)
+
 type Command struct {
 	fn   func(text.Editor)
 	s    string
@@ -52,6 +56,9 @@ func (c *Command) nextFn() func(f text.Editor) {
 }
 
 func compileAddr(a Address) func(f text.Editor) {
+	if a == nil {
+		return noop
+	}
 	return a.Set
 }
 

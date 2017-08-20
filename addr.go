@@ -15,25 +15,30 @@ type Address interface {
 	// Back returns true if the address semantics should be executed in reverse
 	Back() bool
 }
+
 // Regexp is an address computed by a regexp
 type Regexp struct {
 	re   *regexp.Regexp
 	back bool
 	rel  int
 }
+
 // Bytes is an address computed by a relative or absolute byte offset
 type Byte struct {
 	Q   int64
 	rel int
 }
+
 // Line is an address computed by a relative or absolute byte offset
 type Line struct {
 	Q   int64
 	rel int
 }
+
 // Dot is the current dot address
 type Dot struct {
 }
+
 // Compound combines two address values with an operator
 type Compound struct {
 	a0, a1 Address
@@ -47,8 +52,15 @@ func (d Dot) Back() bool      { return false }
 func (c Compound) Back() bool { return c.a1.Back() }
 
 func (c *Compound) Set(f text.Editor) {
+	if c.a0 == nil {
+		return
+	}
 	c.a0.Set(f)
 	q0, _ := f.Dot()
+
+	if c.a1 == nil {
+		return
+	}
 	c.a1.Set(f)
 	_, r1 := f.Dot()
 	if c.Back() {
@@ -87,7 +99,7 @@ func (r *Line) Set(f text.Editor) {
 	p := f.Bytes()
 	switch r.rel {
 	case 0:
-		q0, q1 := text.Findline(r.Q, f.Bytes())
+		q0, q1 := text.Findline2(r.Q, bytes.NewReader(p))
 		f.Select(q0, q1)
 	case 1:
 		_, org := f.Dot()

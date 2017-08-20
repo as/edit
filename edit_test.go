@@ -15,6 +15,16 @@ func TestExtractChange(t *testing.T) {
 		t.Fatalf("failed: %s\n", err)
 	}
 	x := []tbl{
+		{"", "", ""},
+		{"",          ",x,apple,d", ""},
+//		{"ab",        "#1d", "b"},
+		{"c",         "#1a,b,", "cb"},
+		{"c",         "#1i,b,", "cb"},
+		{"abcd",      "#1i, ,", "a bcd"},
+		{"the brown fox", "#3i, quick,", "the quick brown fox"},
+//		{"he", "#2,a,y,", "hey"},
+//		{"he", "#0,i,t,", "the"},
+		{"the quick brown peach", ",x,apple,d", "the quick brown peach"},
 		{"the quick brown fox", ",x, ,d", "thequickbrownfox"},
 		{"racecar car carrace", ",x,racecar,x,car,d", "race car carrace"},
 		{"public static void func", ",y,func,d", "func"},
@@ -25,7 +35,8 @@ func TestExtractChange(t *testing.T) {
 		{"programs are processes", "+#12 a, not,", "programs are not processes"},
 		{"gnu EMACS", ",d", ""},
 		{"considered harmful", "a,vim: ,", "vim: considered harmful"},
-		{"abcdefabcdefabcdefabcdef", ",x,....,x,..,x,.,i,@,", "@a@b@c@d@e@f@a@b@c@d@e@f@a@b@c@d@e@f@a@b@c@d@e@"},
+		{"................", ",x,....,x,..,x,.,i,@,", "@.@.@.@.@.@.@.@.@.@.@.@.@.@.@.@."},
+		{"................", ",x,....,x,..,x,.,a,@,", ".@.@.@.@.@.@.@.@.@.@.@.@.@.@.@.@"},
 		{"Ralpha Rcmd Rdigit", ",x,R(alpha|digit),x,R,c,r,", "ralpha Rcmd rdigit"},
 	}
 	for _, v := range x {
