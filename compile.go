@@ -2,6 +2,7 @@ package edit
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/as/text"
 )
@@ -21,6 +22,14 @@ type Command struct {
 	next *Command
 }
 
+func MustCompile(s string) (cmd *Command) {
+	cmd, err := Compile(s)
+	if err != nil {
+		panic(fmt.Sprintf("MustCompile: %s\n", err))
+	}
+	return cmd
+}
+
 // Compile runs the build steps on the input string and returns
 // a runnable command.
 func Compile(s string) (cmd *Command, err error) {
@@ -37,10 +46,6 @@ func (c *Command) Run(ed text.Editor) (err error) {
 	if c.fn == nil {
 		return ErrNilFunc
 	}
-	// TODO: return an error
-	// TODO: type switch on Invertable and commit the transaction
-	//       if that interface is implemented so Undo doesn't step
-	//       through x,foo,x,., ...
 	c.fn(ed)
 	return err
 }

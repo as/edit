@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/as/io/rev"
 	"github.com/as/text"
+	"github.com/as/text/find"
 	"regexp"
 )
 
@@ -99,7 +100,7 @@ func (r *Line) Set(f text.Editor) {
 	p := f.Bytes()
 	switch r.rel {
 	case 0:
-		q0, q1 := text.Findline2(r.Q, bytes.NewReader(p))
+		q0, q1 := find.Findline2(r.Q, bytes.NewReader(p))
 		f.Select(q0, q1)
 	case 1:
 		_, org := f.Dot()
@@ -108,7 +109,7 @@ func (r *Line) Set(f text.Editor) {
 			r.Q--
 		}
 		p = p[org:]
-		q0, q1 := text.Findline2(r.Q, bytes.NewReader(p))
+		q0, q1 := find.Findline2(r.Q, bytes.NewReader(p))
 		f.Select(q0+org, q1+org)
 	case -1:
 		org, _ := f.Dot()
@@ -117,7 +118,7 @@ func (r *Line) Set(f text.Editor) {
 			//r.Q--
 		}
 		p = p[:org]
-		q0, q1 := text.Findline2(r.Q, rev.NewReader(p)) // 0 = len(p)-1
+		q0, q1 := find.Findline2(r.Q, rev.NewReader(p)) // 0 = len(p)-1
 		//fmt.Printf("Line.Set 1: %d:%d\n", q0, q1)
 		l := q1 - q0
 		q0 = org - q1
