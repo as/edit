@@ -292,7 +292,7 @@ func lexOp(l *lexer) statefn {
 		l.backup()
 		l.lastop = item{kindOp, op}
 	}
-	if op != "" && (l.accept(ralpha) || l.peek() == eof) {
+	if op != "" && (l.accept(rcmd) || l.peek() == eof) {
 		l.inject(item{kindByteOffset, max()})
 		l.backup()
 	}

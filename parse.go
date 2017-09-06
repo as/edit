@@ -112,7 +112,7 @@ func parseSimpleAddr(p *parser) (a Address) {
 	case kindDot:
 		return &Dot{}
 	}
-	p.err = fmt.Errorf("bad address")
+	p.err = fmt.Errorf("bad address: %q", v)
 	return
 }
 
