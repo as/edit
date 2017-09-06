@@ -292,6 +292,7 @@ func lexOp(l *lexer) statefn {
 		l.backup()
 		l.lastop = item{kindOp, op}
 	}
+	// use rcmd to det. whether closing addr is injected
 	if op != "" && (l.accept(rcmd) || l.peek() == eof) {
 		l.inject(item{kindByteOffset, max()})
 		l.backup()
