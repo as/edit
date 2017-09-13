@@ -27,7 +27,7 @@ const (
 	rescape = `#/?+-;,\abnrtx`
 )
 
-const maxBytes = 1<<63 - 1
+const maxBytes = ^uint64(0)
 
 func max() string {
 	return fmt.Sprintf("%v", maxBytes)
