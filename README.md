@@ -31,15 +31,16 @@ http://doc.cat-v.org/bell_labs/sam_lang_tutorial/
 
 Benchmark before coalescing (2017.09.17)
 ```
-BenchmarkChange1KBto2KB-4                   2000            833904 ns/op
-BenchmarkChange1KBto1KB-4                   2000            846312 ns/op
-BenchmarkChange1KBto1KBNest4x2x1-4          1000           1515215 ns/op
-BenchmarkChange1KBto1KBx16x4x1-4            1000           1400592 ns/op
-BenchmarkChange1KBto512B-4                  3000            507303 ns/op
-BenchmarkDelete1KB-4
+goos: windows
+goarch: amd64
+pkg: github.com/as/edit
+BenchmarkChange128KBto64KB-4             	       1	3531749200 ns/op
+BenchmarkChange128KBto128KB-4            	       1	3784740700 ns/op
+BenchmarkChange128KBto128KBNest4x2x1-4   	       1	3642752800 ns/op
+BenchmarkChange128KBto128KBx16x4x1-4     	       1	3589181900 ns/op
 ```
 
-Afterc coalescing
+After coalescing
 
 ```
 ```
