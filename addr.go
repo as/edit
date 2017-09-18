@@ -78,7 +78,7 @@ func (b *Byte) Set(f text.Editor) {
 	} else if b.rel == 1 {
 		f.Select(q+q1, q+q1)
 	} else {
-		f.Select(q, q)
+		f.Select(q-1, q)
 	}
 }
 func (r *Regexp) Set(f text.Editor) {
@@ -91,7 +91,7 @@ func (r *Regexp) Set(f text.Editor) {
 	}
 	r0, r1 := int64(loc[0])+org, int64(loc[1])+org
 	if r.rel == 1 {
-		r0 = r1
+		//r0 = r1
 	}
 	f.Select(r0, r1)
 }
