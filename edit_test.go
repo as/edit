@@ -1,8 +1,9 @@
 package edit
 
 import (
-	"github.com/as/text"
 	"testing"
+
+	"github.com/as/text"
 )
 
 type tbl struct {
@@ -10,20 +11,23 @@ type tbl struct {
 }
 
 func TestExtractChange(t *testing.T) {
-	w, err := text.Open(text.NewBuffer())
+	b, err := text.Open(text.NewBuffer())
+	w := b //text.Trace(b)
 	if err != nil {
 		t.Fatalf("failed: %s\n", err)
 	}
 	x := []tbl{
 		{"", "", ""},
 		{"", ",x,apple,d", ""},
-		//		{"ab",        "#1d", "b"},
-		{"c", "#1a,b,", "cb"},
-		{"c", "#1i,b,", "cb"},
-		{"abcd", "#1i, ,", "a bcd"},
-		{"the brown fox", "#3i, quick,", "the quick brown fox"},
-		//		{"he", "#2,a,y,", "hey"},
-		//		{"he", "#0,i,t,", "the"},
+		{"aaaaaaaaa", ",d", ""},
+		{"a", "#1d", ""},
+		{"ab", "#1d", "b"},
+		{"abc", "#1d", "bc"},
+		{"abcd", "#1i, ,", " abcd"},
+		{"the gray fox", "#3a, quick,", "the quick gray fox"},
+		{"the gray fox", "#4i, quick,", "the quick gray fox"},
+		{"he", "#2,a,y,", "hey"},
+		{"he", "#0,i,t,", "the"},
 		{"the quick brown peach", ",x,apple,d", "the quick brown peach"},
 		{"the quick brown fox", ",x, ,d", "thequickbrownfox"},
 		{"racecar car carrace", ",x,racecar,x,car,d", "race car carrace"},
@@ -38,10 +42,16 @@ func TestExtractChange(t *testing.T) {
 		{"................", ",x,....,x,..,x,.,i,@,", "@.@.@.@.@.@.@.@.@.@.@.@.@.@.@.@."},
 		{"................", ",x,....,x,..,x,.,a,@,", ".@.@.@.@.@.@.@.@.@.@.@.@.@.@.@.@"},
 		{"Ralpha Rcmd Rdigit", ",x,R(alpha|digit),x,R,c,r,", "ralpha Rcmd rdigit"},
-		{"the quick brown f", "0,1a,ox,", "the quick brown fox"},
-		{"12", "0,1|xc", "3132"},
-		{"123", ",1|xc", "313233"},
-		{"123", ",|xc", "313233"},
+		{"teh quark brown f", "0,1a,ox,", "teh quark brown fox"},
+		{"nono", ",x,no,c,yes,", "yesyes"},
+		{"f", "#1i,e,", "ef"},
+		{"x", "#1a,y,", "xy"},
+		{"how are you", ",y, ,x,.,c,x,", "xxx xxx xxx"},
+		{"the quick the", ",y,quick,d", "quick"},
+		{"aaaaaaa", ",x,...,d", "a"},
+		//{"12", "0,1|xc", "3132"},
+		//{"123", ",1|xc", "313233"},
+		//{"123", ",|xc", "313233"},
 	}
 
 	for _, v := range x {
@@ -62,9 +72,9 @@ func TestExtractChange(t *testing.T) {
 		{"", ",x,apple,d", ">"},
 		//		{"ab",        "#1d", ">b"},
 		{"c", "#1a,b,", ">bc"},
-		{"c", "#1i,b,", ">bc"},
-		{"abcd", "#1i, ,", "> abcd"},
-		{"the brown fox", "#3i, quick,", ">th quicke brown fox"},
+		{"c", "#1i,b,", "b>c"},
+		{"abcd", "#1i, ,", " >abcd"},
+		{"the brown fox", "#4i, quick,", ">th quicke brown fox"},
 		//		{"he", "#2,a,y,", "hey"},
 		//		{"he", "#0,i,t,", "the"},
 		{"the quick brown peach", ",x,apple,d", ">the quick brown peach"},
@@ -81,8 +91,8 @@ func TestExtractChange(t *testing.T) {
 	}
 	for _, v := range y {
 		w.Delete(0, w.Len())
+		w.Insert([]byte(v.in), 0)
 		w.Insert([]byte{'>'}, 0)
-		w.Insert([]byte(v.in), 1)
 		w.Select(0, 0)
 		cmd, err := Compile(v.prog)
 		if err != nil {

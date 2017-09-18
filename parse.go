@@ -26,6 +26,7 @@ type parser struct {
 	stop      chan error
 	cmd       []*Command
 	addr      Address
+	q         int64
 }
 
 func parse(i chan item) *parser {
@@ -40,9 +41,7 @@ func parse(i chan item) *parser {
 // Put
 func parseAddr(p *parser) (a Address) {
 	a0 := parseSimpleAddr(p)
-	//	fmt.Printf("parseAddr:1 %s\n", p.tok)
 	p.Next()
-	//	fmt.Printf("parseAddr:2 %s\n", p.tok)
 	op, a1 := parseOp(p)
 	if op == '\x00' {
 		return a0
@@ -99,7 +98,10 @@ func parseSimpleAddr(p *parser) (a Address) {
 			p.fatal(err)
 			return
 		}
-		return &Regexp{re, back, rel}
+		if rel != -1{
+			rel = 1
+		}
+		return &Regexp{re, back, 1}
 	case kindLineOffset, kindByteOffset:
 		i := p.mustatoi(v)
 		if rel < 0 {
@@ -126,6 +128,13 @@ func parseArg(p *parser) (arg string) {
 	return p.tok.value
 }
 
+func (p *parser) Dot(f text.Editor) (q0, q1 int64) {
+	q0, q1 = f.Dot()
+	//q0+= p.q
+	//q1+= p.q
+	return
+}
+
 // Put
 func parseCmd(p *parser) (c *Command) {
 	c = new(Command)
@@ -137,28 +146,32 @@ func parseCmd(p *parser) (c *Command) {
 		argv := parseArg(p)
 		c.args = argv
 		c.fn = func(f text.Editor) {
-			q0, q1 := f.Dot()
+			q0, q1 := p.Dot(f)
 			b := []byte(argv)
 			if v == "i" {
 				f.Insert(b, q0)
 			} else {
 				f.Insert(b, q1)
 			}
+			p.q += int64(len(argv))
 		}
 		return
 	case "c":
 		argv := parseArg(p)
 		c.args = argv
 		c.fn = func(f text.Editor) {
-			q0, q1 := f.Dot()
+			q0, q1 := p.Dot(f)
 			f.Delete(q0, q1)
 			f.Insert([]byte(argv), q0)
+			p.q += int64(len(argv))
+			p.q -= q1 - q0
 		}
 		return
 	case "d":
 		c.fn = func(f text.Editor) {
-			q0, q1 := f.Dot()
+			q0, q1 := p.Dot(f)
 			f.Delete(q0, q1)
+			p.q -= q1 - q0
 		}
 		return
 	case "e":
@@ -304,30 +317,25 @@ func parseCmd(p *parser) (c *Command) {
 		}
 		c.fn = func(f text.Editor) {
 			q0, q1 := f.Dot()
-			x0, x1 := q0, q0
+			x0, x1 := int64(0), int64(0)
+
+			buf := bytes.NewReader(f.Bytes()[q0:q1])
 			for {
-				//				fmt.Printf("x")
-				if x1 > q1 {
-					break
-				}
-				buf := bytes.NewReader(f.Bytes()[x1:q1])
 				loc := re.FindReaderIndex(buf)
 				if loc == nil {
+					buf.Seek(x1, 0)
 					eprint("not found")
 					break
 				}
 				x0, x1 = int64(loc[0])+x1, int64(loc[1])+x1
-				f.Select(x0, x1)
-				a := len(f.Bytes())
+
+				f.Select(q0+x0, q0+x1)
 				if nextfn := c.nextFn(); nextfn != nil {
 					nextfn(f)
 				}
-				//d0, d1 := f.Dot()
-				b := len(f.Bytes()) - a
-				x1 += int64(b) //+ (d1-d0)
-				q1 += int64(b)
-				x0 = x1
+				buf.Seek(x1, 0)
 			}
+			f.Select(q0, q1)
 		}
 		return
 	case "y":
@@ -340,37 +348,30 @@ func parseCmd(p *parser) (c *Command) {
 		}
 		c.fn = func(f text.Editor) {
 			q0, q1 := f.Dot()
-			x0, x1 := q0, q0
-			y0, y1 := q0, q0
+			x0, x1 := int64(0), int64(0)
+			y0, y1 := int64(0), q1
+			buf := bytes.NewReader(f.Bytes()[q0:q1])
 			for {
-				if x1 > q1 {
-					break
-				}
-				buf := bytes.NewReader(f.Bytes()[x1:q1])
 				loc := re.FindReaderIndex(buf)
 				if loc == nil {
-					if x1 < q1 {
-						f.Select(x1, q1)
-						if nextfn := c.nextFn(); nextfn != nil {
-							nextfn(f)
-						}
-					}
+					buf.Seek(x1, 0)
+					eprint("not found")
 					break
 				}
-				y0 = x0
+				y0 = x1
 				x0, x1 = int64(loc[0])+x1, int64(loc[1])+x1
 				y1 = x0
-
-				f.Select(y0, y1)
-				a := len(f.Bytes())
+				f.Select(q0+y0, q0+y1)
 				if nextfn := c.nextFn(); nextfn != nil {
 					nextfn(f)
 				}
-				//d0, d1 := f.Dot()
-				b := len(f.Bytes()) - a
-				x1 += int64(b) //+ (d1-d0)
-				q1 += int64(b)
-				x0 = x1
+				buf.Seek(x1, 0)
+			}
+			if x1 != q1 {
+				f.Select(q0+x1, q1)
+				if nextfn := c.nextFn(); nextfn != nil {
+					nextfn(f)
+				}
 			}
 		}
 		return
