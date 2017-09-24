@@ -12,6 +12,7 @@ import (
 
 var (
 	ErrNilFunc = errors.New("empty program")
+	ErrNilEditor = errors.New("nil editor")
 )
 
 var (
@@ -66,6 +67,9 @@ func interp(buf text.Buffer, rec event.Record, ins, del int) {
 
 // Run runs the compiled program on ed
 func (c *Command) Run(ed text.Editor) (err error) {
+	if ed == nil{
+		return ErrNilEditor
+	}
 	if c.fn == nil {
 		return ErrNilFunc
 	}
@@ -170,7 +174,6 @@ func compile(p *parser) (cmd *Command) {
 		addr := compileAddr(p.addr)
 		if addr != nil {
 			addr(f)
-			fmt.Printf("f.Dot is now %#v\n", fmt.Sprint(f.Dot()))
 		}
 		if p.cmd != nil && p.cmd[0] != nil && p.cmd[0].fn != nil {
 			p.cmd[0].fn(f)
