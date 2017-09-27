@@ -75,6 +75,7 @@ func (c *Command) Run(ed text.Editor) (err error) {
 	}
 	hist := worm.NewLogger()
 	cor := text.NewCOR(ed, hist)
+	defer cor.Close()
 	q0,q1:=ed.Dot()
 	cor.Select(q0,q1)
 	c.fn(cor)

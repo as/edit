@@ -52,4 +52,4 @@ func main() {
 	no(err)
 
 	out.Flush()
-}
+}
