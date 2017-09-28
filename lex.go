@@ -19,7 +19,7 @@ func (i item) String() string {
 }
 
 const (
-	ralpha  = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	ralpha  = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ="
 	rcmd    = ralpha + "<>|"
 	rdigit  = "0123456789"
 	rop     = "+-;,"
@@ -48,10 +48,12 @@ const (
 	kindSemi
 	kindHash
 	kindErr
+	kindGlobal
 	kindRegexp
 	kindRegexpBack
 	kindByteOffset
 	kindLineOffset
+	kindCount
 	kindCmd
 	kindArg
 )
@@ -262,11 +264,47 @@ func lexAddr(l *lexer) statefn {
 	return lexCmd
 }
 
+func lexArgsTuple(l *lexer) statefn {
+	if !l.accept("s") {
+		return l.errorf("want 's', have %q", l.String())
+	}
+	l.emit(kindCmd)
+
+	if l.accept(rdigit) {
+		// optional repetition count
+		l.acceptRun(rdigit)
+		l.emit(kindCount)
+	}
+	r := string(l.next())
+	l.ignore()
+
+	l.acceptUntil(r)
+	l.emit(kindArg)
+	if !l.accept(r) {
+		return l.errorf("bad opening delimiter: %q", r)
+	}
+	l.ignore()
+	l.acceptUntil(r)
+	l.emit(kindArg)
+	if !l.accept(r) {
+		return l.errorf("bad closing delimiter: %q", r)
+	}
+	l.ignore()
+	ignoreSpaces(l)
+	if l.accept("g") {
+		l.emit(kindGlobal)
+	}
+	return lexCmd
+}
+
 func lexCmd(l *lexer) statefn {
 	ignoreSpaces(l)
 	if l.peek() == eof {
 		l.emit(kindEof)
 		return nil
+	}
+	if l.peek() == 's' {
+		return lexArgsTuple
 	}
 	if !l.accept(ralpha) {
 		if l.accept("|<>") {

@@ -4,20 +4,26 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
+
 	"github.com/as/event"
 	"github.com/as/text"
 	"github.com/as/worm"
-	"io"
 )
 
 var (
-	ErrNilFunc = errors.New("empty program")
+	ErrNilFunc   = errors.New("empty program")
 	ErrNilEditor = errors.New("nil editor")
 )
 
 var (
 	noop = func(ed text.Editor) {}
 )
+
+type Options struct {
+	Sender Sender
+	Origin string
+}
 
 type Command struct {
 	cor  *text.COR
@@ -37,8 +43,11 @@ func MustCompile(s string) (cmd *Command) {
 
 // Compile runs the build steps on the input string and returns
 // a runnable command.
-func Compile(s string) (cmd *Command, err error) {
-	return cmdparse(s)
+func Compile(s string, opts ...*Options) (cmd *Command, err error) {
+	_, itemc := lex("cmd", s)
+	p := parse(itemc, opts...)
+	err = <-p.stop
+	return compile(p), err
 }
 
 // Func returns a function entry point that operates on a text.Editor
@@ -67,7 +76,7 @@ func interp(buf text.Buffer, rec event.Record, ins, del int) {
 
 // Run runs the compiled program on ed
 func (c *Command) Run(ed text.Editor) (err error) {
-	if ed == nil{
+	if ed == nil {
 		return ErrNilEditor
 	}
 	if c.fn == nil {
@@ -76,12 +85,12 @@ func (c *Command) Run(ed text.Editor) (err error) {
 	hist := worm.NewLogger()
 	cor := text.NewCOR(ed, hist)
 	defer cor.Close()
-	q0,q1:=ed.Dot()
-	cor.Select(q0,q1)
+	q0, q1 := ed.Dot()
+	cor.Select(q0, q1)
 	c.fn(cor)
 	cor.Flush()
 	q0, q1 = cor.Dot()
-	ed.Select(q0,q1)
+	ed.Select(q0, q1)
 	ins, del := int64(0), int64(0)
 	buf := ed
 	for i := int64(0); i < hist.Len(); i++ {
@@ -92,7 +101,6 @@ func (c *Command) Run(ed text.Editor) (err error) {
 		case *event.Delete:
 			del += t.Q1 - t.Q0
 		}
-		//log.Printf("%d: %#v\n", i, t)
 	}
 	ep := buf.Len()
 	sp := ep
@@ -103,8 +111,8 @@ func (c *Command) Run(ed text.Editor) (err error) {
 	} else if del > ins {
 		defer buf.Delete(buf.Len()-(del-ins), buf.Len())
 	}
-	
-	for i := int64(hist.Len())- 1; i >= 0; i-- {
+
+	for i := int64(hist.Len()) - 1; i >= 0; i-- {
 		e, err := hist.ReadAt(i)
 		switch t := e.(type) {
 		case *event.Write:
@@ -181,11 +189,4 @@ func compile(p *parser) (cmd *Command) {
 		}
 	}
 	return &Command{fn: fn}
-}
-
-func cmdparse(s string) (cmd *Command, err error) {
-	_, itemc := lex("cmd", s)
-	p := parse(itemc)
-	err = <-p.stop
-	return compile(p), err
 }

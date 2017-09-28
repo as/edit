@@ -16,6 +16,8 @@ import (
 	"github.com/as/text"
 )
 
+type Print string
+
 var eprint = n
 
 type parser struct {
@@ -27,12 +29,19 @@ type parser struct {
 	cmd       []*Command
 	addr      Address
 	q         int64
+
+	Options *Options
 }
 
-func parse(i chan item) *parser {
+func parse(i chan item, opts ...*Options) *parser {
+	var o *Options
+	if len(opts) != 0 {
+		o = opts[0]
+	}
 	p := &parser{
-		in:   i,
-		stop: make(chan error),
+		in:      i,
+		stop:    make(chan error),
+		Options: o,
 	}
 	go p.run()
 	return p
@@ -119,11 +128,9 @@ func parseSimpleAddr(p *parser) (a Address) {
 }
 
 func parseArg(p *parser) (arg string) {
-	//fmt.Printf("parseArg: %s\n", p.tok.value)
 	p.Next()
-	//fmt.Printf("parseArg: %s\n", p.tok.value)
 	if p.tok.kind != kindArg {
-		//		p.fatal(fmt.Errorf("not arg"))
+		p.fatal(fmt.Errorf("want arg, have %q", p.tok.value))
 	}
 	return p.tok.value
 }
@@ -135,6 +142,11 @@ func (p *parser) Dot(f text.Editor) (q0, q1 int64) {
 	return
 }
 
+type Sender interface {
+	SendFirst(e interface{})
+	Send(e interface{})
+}
+
 // Put
 func parseCmd(p *parser) (c *Command) {
 	c = new(Command)
@@ -142,6 +154,30 @@ func parseCmd(p *parser) (c *Command) {
 	//	fmt.Printf("parseCmd: %s\n", v)
 	c.s = v
 	switch v {
+	case "=":
+		argv := parseArg(p)
+		c.args = argv
+		c.fn = func(f text.Editor) {
+			if p.Options.Sender == nil {
+				return
+			}
+			q0, q1 := p.Dot(f)
+			str := fmt.Sprintf("%s:#%d,#%d", p.Options.Origin, q0+1, q1)
+			p.Options.Sender.SendFirst(Print(str))
+		}
+		return
+	case "p":
+		argv := parseArg(p)
+		c.args = argv
+		c.fn = func(f text.Editor) {
+			if p.Options.Sender == nil {
+				return
+			}
+			q0, q1 := p.Dot(f)
+			str := fmt.Sprintf("%s", f.Bytes()[q0:q1])
+			p.Options.Sender.SendFirst(Print(str))
+		}
+		return
 	case "a", "i":
 		argv := parseArg(p)
 		c.args = argv
@@ -176,7 +212,6 @@ func parseCmd(p *parser) (c *Command) {
 		return
 	case "e":
 	case "k":
-	case "s":
 	case "r":
 		argv := parseArg(p)
 		c.args = argv
@@ -193,6 +228,78 @@ func parseCmd(p *parser) (c *Command) {
 			f.Insert(data, q0)
 		}
 		return
+	case "s":
+		matchn := int64(1)
+		sre := ""
+		parseArg(p)
+		a1 := p.tok
+		if a1.kind == kindCount {
+			matchn = p.mustatoi(a1.value)
+			parseArg(p)
+			a2 := p.tok
+			sre = a2.value
+		} else {
+			sre = a1.value
+		}
+		parseArg(p)
+		a3 := p.tok
+		replProg := compileReplaceAmp(a3.value)
+
+		// And at this point I realized that instead
+		// of a one token look-ahead parser, I have
+		// a one token look-behind parser. How unfortunate.
+		//
+		// TODO(as): check for 'g' here after fixing the parser
+		// try parsing the last part of the construction anyway
+		// and look for 'g'
+		parseArg(p)
+		if p.tok.kind == kindGlobal {
+			if p.tok.value != "g" {
+				p.fatal("s: suffix not supported: " + p.tok.value)
+				return
+			}
+			matchn = -1
+		}
+		if sre == "" {
+			eprint("s: no regexp to find")
+			return
+		}
+
+		re, err := regexp.Compile(sre)
+		if err != nil {
+			p.fatal(err)
+			return
+		}
+		c.fn = func(f text.Editor) {
+			q0, q1 := f.Dot()
+			x0, x1 := int64(0), int64(0)
+
+			buf := bytes.NewReader(f.Bytes()[q0:q1])
+			for i := int64(1); ; i++ {
+				loc := re.FindReaderIndex(buf)
+				if loc == nil {
+					buf.Seek(x1, 0)
+					eprint("not found")
+					break
+				}
+				x0, x1 = int64(loc[0])+x1, int64(loc[1])+x1
+				f.Select(q0+x0, q0+x1)
+
+				if i == matchn || matchn == -1 {
+					q0, q1 := p.Dot(f)
+					buf := replProg.Gen(f.Bytes()[q0:q1])
+					f.Delete(q0, q1)
+					f.Insert(buf, q0)
+					p.q -= q1 - q0
+					p.q += int64(len(buf))
+				}
+
+				buf.Seek(x1, 0)
+			}
+			f.Select(q0, q1)
+		}
+		return
+
 	case "w":
 		argv := parseArg(p)
 		c.args = argv
@@ -379,6 +486,54 @@ func parseCmd(p *parser) (c *Command) {
 	return nil
 }
 
+type ReplaceAmp []func([]byte) string
+
+func (r ReplaceAmp) Run(ed text.Editor, q1 int64, sel []byte) (n int) {
+	for _, fn := range r {
+		b := []byte(fn(sel))
+		n += len(b)
+		ed.Insert(b, q1)
+	}
+	return n
+}
+func (r ReplaceAmp) Gen(replace []byte) (b []byte) {
+	for _, fn := range r {
+		b = append(b, fn(replace)...)
+	}
+	return b
+}
+func compileReplaceAmp(in string) (s ReplaceAmp) {
+	// we can use strings.Map but then invalid runes
+	// are replaced. we'll do it the old fashioned
+	// way for now
+
+	// strings are immutable, but this is faster than
+	// the string 'builders' on platforms tested
+	for {
+		i := strings.Index(in, `&`)
+		if i == -1 {
+			s = append(s, func([]byte) string { return in })
+			return
+		}
+		if i > 0 && in[i] == '\\' {
+			s = append(s, func(b []byte) string { return in[:i-2] })
+			s = append(s, func(b []byte) string { return "&" })
+			i += 2
+		} else {
+			s = append(s, func(b []byte) string { return in[:i-1] })
+			s = append(s, func(b []byte) string { return string(b) })
+			i++
+		}
+		if i == len(in) {
+			break
+		}
+		in = in[i:]
+	}
+	if s == nil {
+		s = append(s, func(b []byte) string { return "" })
+	}
+	return
+}
 func (p *parser) Next() *item {
 	p.last = p.tok
 	p.tok = <-p.in

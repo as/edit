@@ -10,12 +10,38 @@ type tbl struct {
 	in, prog, want string
 }
 
+var tabstop = []string{"A more common example\nis indenting a block of text\nby a tab stop.",
+	"A more common example\n\tis indenting a block of text\n\tby a tab stop.",
+}
+
 func TestExtractChange(t *testing.T) {
 	b, err := text.Open(text.NewBuffer())
 	w := b //text.Trace(b)
 	if err != nil {
 		t.Fatalf("failed: %s\n", err)
 	}
+
+	excerpt := `
+	Here is an example. 
+	Say we wanted to double space the document.
+	That is.
+	Turn every newline
+	Into two newlines.
+	`
+
+	want := `
+
+	Here is an example. 
+
+	Say we wanted to double space the document.
+
+	That is.
+
+	Turn every newline
+
+	Into two newlines.
+
+	`
 	x := []tbl{
 		{"", "", ""},
 		{"", ",x,apple,d", ""},
@@ -54,9 +80,21 @@ func TestExtractChange(t *testing.T) {
 		{"the\nquick\nbrown\nfox", `2,$d`, "the\n"},
 		{"the\nquick\nbrown\nfox", `^,$d`, ""},
 		{"the\nquick\nbrown\nfox", `^,#4d`, "quick\nbrown\nfox"},
-		//{"12", "0,1|xc", "3132"},
-		//{"123", ",1|xc", "313233"},
-		//{"123", ",|xc", "313233"},
+		{"adefg", `^,+#1a@bc@,`, `abcdefg`},
+		{"qrstuv", `$a,wxyz,`, `qrstuvwxyz`},
+		{"qrstuv", `$a,wxyz,`, `qrstuvwxyz`},
+		{"abbc", `,s/b/x/`, `axbc`},
+		{"teh teh teh", `,s/teh/the/g`, `the the the`},
+		{"Oh peter", `,s/peter/& & & & &/g`, `Oh peter peter peter peter peter`},
+		{"They", `,s/ey/&&&&&/g`, `Theyeyeyeyey`},
+		//		{excerpt, `,x/\n/ a/\n/`,want},
+		//		{excerpt, `,x/\n/ c/\n\n/`,want},
+		//		{excerpt, `,x/$/ a/\n/`,want},
+		//		{excerpt, `,x/^/ i/\n/`,want},
+		{excerpt, `,x/\n+/ a/\n/`, want},
+		//		{tabstop[0], `,x/^/a/ /`,tabstop[1]},
+		//		{tabstop[0], `,x/^/c/ /`,tabstop[1]},
+		//		{tabstop[0], `,x/.*\n/i/ /`,tabstop[1]},
 	}
 
 	for _, v := range x {
