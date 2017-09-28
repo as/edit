@@ -143,8 +143,8 @@ func (p *parser) Dot(f text.Editor) (q0, q1 int64) {
 }
 
 type Sender interface {
-	SendFirst(e interface{})
 	Send(e interface{})
+	SendFirst(e interface{})
 }
 
 // Put
@@ -163,7 +163,7 @@ func parseCmd(p *parser) (c *Command) {
 			}
 			q0, q1 := p.Dot(f)
 			str := fmt.Sprintf("%s:#%d,#%d", p.Options.Origin, q0+1, q1)
-			p.Options.Sender.SendFirst(Print(str))
+			p.Options.Sender.Send(Print(str))
 		}
 		return
 	case "p":
@@ -175,7 +175,7 @@ func parseCmd(p *parser) (c *Command) {
 			}
 			q0, q1 := p.Dot(f)
 			str := fmt.Sprintf("%s", f.Bytes()[q0:q1])
-			p.Options.Sender.SendFirst(Print(str))
+			p.Options.Sender.Send(Print(str))
 		}
 		return
 	case "a", "i":
