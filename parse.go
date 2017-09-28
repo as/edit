@@ -98,7 +98,7 @@ func parseSimpleAddr(p *parser) (a Address) {
 			p.fatal(err)
 			return
 		}
-		if rel != -1{
+		if rel != -1 {
 			rel = 1
 		}
 		return &Regexp{re, back, 1}

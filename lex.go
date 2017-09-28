@@ -56,17 +56,17 @@ const (
 	kindArg
 )
 const (
-	eof   = '\x00'
-	slash = '/'
-	quest = '?'
-	comma = ','
-	plus  = "+"
-	dot   = '.'
-	colon = ':'
-	semi  = ';'
-	hash  = '#'
+	eof    = '\x00'
+	slash  = '/'
+	quest  = '?'
+	comma  = ','
+	plus   = "+"
+	dot    = '.'
+	colon  = ':'
+	semi   = ';'
+	hash   = '#'
 	dollar = '$'
-	caret = '^'
+	caret  = '^'
 )
 
 type statefn func(*lexer) statefn
@@ -243,12 +243,12 @@ func lexAddr(l *lexer) statefn {
 		l.emit(kindByteOffset)
 		return lexOp
 	default:
-		if l.accept("$"){
+		if l.accept("$") {
 			l.ignore()
 			l.inject(item{kindByteOffset, max()})
 			return lexCmd
 		}
-		if l.accept("^"){
+		if l.accept("^") {
 			l.ignore()
 			l.inject(item{kindByteOffset, "0"})
 			return lexOp
@@ -261,7 +261,6 @@ func lexAddr(l *lexer) statefn {
 	}
 	return lexCmd
 }
-
 
 func lexCmd(l *lexer) statefn {
 	ignoreSpaces(l)
@@ -293,7 +292,7 @@ func lexOp(l *lexer) statefn {
 		l.emit(kindEof)
 		return nil
 	}
-	if tok == dollar{
+	if tok == dollar {
 		l.ignore()
 		l.inject(item{kindByteOffset, max()})
 		return lexAddr
@@ -312,7 +311,7 @@ func lexOp(l *lexer) statefn {
 		l.lastop = item{kindOp, op}
 	}
 	// use rcmd to det. whether closing addr is injected
-	if tok := l.peek(); op != "" && (l.accept(rcmd) || tok == eof ) {
+	if tok := l.peek(); op != "" && (l.accept(rcmd) || tok == eof) {
 		l.inject(item{kindByteOffset, max()})
 		l.backup()
 	}
