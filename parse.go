@@ -34,7 +34,7 @@ type parser struct {
 	cmd       []*Command
 	addr      Address
 	q         int64
-	
+
 	recache map[string]*regexp.Regexp
 
 	Emit    *Emitted
@@ -49,7 +49,7 @@ func parse(i chan item, opts ...*Options) *parser {
 	p := &parser{
 		in:      i,
 		stop:    make(chan error),
-		Emit: &Emitted{},
+		Emit:    &Emitted{},
 		Options: o,
 		recache: make(map[string]*regexp.Regexp),
 	}
@@ -57,11 +57,11 @@ func parse(i chan item, opts ...*Options) *parser {
 	return p
 }
 
-func (p *parser) compileRegexp(s string) (re *regexp.Regexp, err error){
+func (p *parser) compileRegexp(s string) (re *regexp.Regexp, err error) {
 	re, ok := p.recache[s]
-	if !ok{
+	if !ok {
 		re, err = regexp.Compile(s)
-		if err != nil{
+		if err != nil {
 			return nil, err
 		}
 		p.recache[s] = re
@@ -187,10 +187,10 @@ func parseCmd(p *parser) (c *Command) {
 	case "=":
 		argv := parseArg(p)
 		c.args = argv
-			
-			if p.Options == nil || p.Options.Sender == nil {
-				return
-			}
+
+		if p.Options == nil || p.Options.Sender == nil {
+			return
+		}
 		c.fn = func(f text.Editor) {
 			q0, q1 := p.Dot(f)
 			str := fmt.Sprintf("%s:#%d,#%d", p.Options.Origin, q0+1, q1)
@@ -198,9 +198,9 @@ func parseCmd(p *parser) (c *Command) {
 		}
 		return
 	case "p":
-			if p.Options == nil || p.Options.Sender == nil {
-				return
-			}
+		if p.Options == nil || p.Options.Sender == nil {
+			return
+		}
 		argv := parseArg(p)
 		c.args = argv
 		c.fn = func(f text.Editor) {
@@ -372,7 +372,7 @@ func parseCmd(p *parser) (c *Command) {
 	case "g":
 		argv := parseArg(p)
 		c.args = argv
-		re, err :=     regexp.Compile(argv)// p.compileRegexp(argv)//   regexp.Compile(argv) 
+		re, err := regexp.Compile(argv) // p.compileRegexp(argv)//   regexp.Compile(argv)
 		if err != nil {
 			p.fatal(err)
 			return
@@ -389,7 +389,7 @@ func parseCmd(p *parser) (c *Command) {
 	case "v":
 		argv := parseArg(p)
 		c.args = argv
-		re, err :=     regexp.Compile(argv)// p.compileRegexp(argv)//   regexp.Compile(argv) 
+		re, err := regexp.Compile(argv) // p.compileRegexp(argv)//   regexp.Compile(argv)
 		if err != nil {
 			p.fatal(err)
 			return
@@ -450,7 +450,7 @@ func parseCmd(p *parser) (c *Command) {
 	case "x":
 		argv := parseArg(p)
 		c.args = argv
-		re, err :=     regexp.Compile(argv)// p.compileRegexp(argv)//   regexp.Compile(argv) 
+		re, err := regexp.Compile(argv) // p.compileRegexp(argv)//   regexp.Compile(argv)
 		if err != nil {
 			p.fatal(err)
 			return
@@ -481,7 +481,7 @@ func parseCmd(p *parser) (c *Command) {
 	case "y":
 		argv := parseArg(p)
 		c.args = argv
-		re, err :=    regexp.Compile(argv)// p.compileRegexp(argv)//   regexp.Compile(argv) 
+		re, err := regexp.Compile(argv) // p.compileRegexp(argv)//   regexp.Compile(argv)
 		if err != nil {
 			p.fatal(err)
 			return
