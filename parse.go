@@ -47,6 +47,7 @@ func parse(i chan item, opts ...*Options) *parser {
 	p := &parser{
 		in:      i,
 		stop:    make(chan error),
+		Emit: &Emitted{},
 		Options: o,
 	}
 	go p.run()
@@ -155,11 +156,9 @@ type Sender interface {
 
 // Put
 func parseCmd(p *parser) (c *Command) {
-	c = new(Command)
-	p.Emit = &Emitted{}
-
 	v := p.tok.value
 	//	fmt.Printf("parseCmd: %s\n", v)
+	c = &Command{}
 	c.s = v
 	switch v {
 	case "h":

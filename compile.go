@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 
 	"github.com/as/event"
 	"github.com/as/text"
@@ -88,6 +89,8 @@ func (c *Command) Run(ed text.Editor) (err error) {
 	defer cor.Close()
 	q0, q1 := ed.Dot()
 	cor.Select(q0, q1)
+	
+	c.Emit.Dot = c.Emit.Dot[:0]
 	c.fn(cor)
 	cor.Flush()
 	q0, q1 = cor.Dot()
@@ -189,5 +192,6 @@ func compile(p *parser) (cmd *Command) {
 			p.cmd[0].fn(f)
 		}
 	}
+	log.Printf("p.Emit: %#v\n", p.Emit)
 	return &Command{fn: fn, Emit: p.Emit}
 }
