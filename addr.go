@@ -38,6 +38,12 @@ type Line struct {
 
 // Dot is the current dot address
 type Dot struct {
+	Q0, Q1 int64
+}
+
+type File struct {
+	Name string
+	Dot
 }
 
 // Compound combines two address values with an operator

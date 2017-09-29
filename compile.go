@@ -31,6 +31,7 @@ type Command struct {
 	s    string
 	args string
 	next *Command
+	Emit *Emitted
 }
 
 func MustCompile(s string) (cmd *Command) {
@@ -188,5 +189,5 @@ func compile(p *parser) (cmd *Command) {
 			p.cmd[0].fn(f)
 		}
 	}
-	return &Command{fn: fn}
+	return &Command{fn: fn, Emit: p.Emit}
 }

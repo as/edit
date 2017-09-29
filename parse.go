@@ -20,6 +20,11 @@ type Print string
 
 var eprint = n
 
+type Emitted struct {
+	Name string
+	Dot  []Dot
+}
+
 type parser struct {
 	in        chan item
 	out       chan func()
@@ -30,6 +35,7 @@ type parser struct {
 	addr      Address
 	q         int64
 
+	Emit    *Emitted
 	Options *Options
 }
 
@@ -150,10 +156,20 @@ type Sender interface {
 // Put
 func parseCmd(p *parser) (c *Command) {
 	c = new(Command)
+	p.Emit = &Emitted{}
+
 	v := p.tok.value
 	//	fmt.Printf("parseCmd: %s\n", v)
 	c.s = v
 	switch v {
+	case "h":
+		argv := parseArg(p)
+		c.args = argv
+		c.fn = func(f text.Editor) {
+			q0, q1 := p.Dot(f)
+			p.Emit.Dot = append(p.Emit.Dot, Dot{q0, q1})
+		}
+		return
 	case "=":
 		argv := parseArg(p)
 		c.args = argv
@@ -170,7 +186,7 @@ func parseCmd(p *parser) (c *Command) {
 		argv := parseArg(p)
 		c.args = argv
 		c.fn = func(f text.Editor) {
-			if p.Options.Sender == nil {
+			if p.Options == nil || p.Options.Sender == nil {
 				return
 			}
 			q0, q1 := p.Dot(f)
