@@ -41,21 +41,6 @@ type parser struct {
 	Options *Options
 }
 
-func (p *parser) compileRegexp(s string) (re *regexp.Regexp, err error){
-	if p.recache == nil{
-		p.recache = make(map[string]*regexp.Regexp)
-	}
-	re, ok := p.recache[s]
-	if !ok{
-		re, err = regexp.Compile(s)
-		if err != nil{
-			return nil, err
-		}
-		p.recache[s] = re
-	}
-	return re, nil
-}
-
 func parse(i chan item, opts ...*Options) *parser {
 	var o *Options
 	if len(opts) != 0 {
@@ -66,9 +51,22 @@ func parse(i chan item, opts ...*Options) *parser {
 		stop:    make(chan error),
 		Emit: &Emitted{},
 		Options: o,
+		recache: make(map[string]*regexp.Regexp),
 	}
 	go p.run()
 	return p
+}
+
+func (p *parser) compileRegexp(s string) (re *regexp.Regexp, err error){
+	re, ok := p.recache[s]
+	if !ok{
+		re, err = regexp.Compile(s)
+		if err != nil{
+			return nil, err
+		}
+		p.recache[s] = re
+	}
+	return re, nil
 }
 
 // Put
@@ -233,8 +231,7 @@ func parseCmd(p *parser) (c *Command) {
 			q0, q1 := p.Dot(f)
 			f.Delete(q0, q1)
 			f.Insert(b, q0)
-			p.q += int64(len(argv))
-			p.q -= q1 - q0
+			p.q += int64(len(argv)) - (q1 - q0)
 		}
 		return
 	case "d":
@@ -375,7 +372,7 @@ func parseCmd(p *parser) (c *Command) {
 	case "g":
 		argv := parseArg(p)
 		c.args = argv
-		re, err :=  regexp.Compile(argv) //p.compileRegexp(argv) 
+		re, err :=     regexp.Compile(argv)// p.compileRegexp(argv)//   regexp.Compile(argv) 
 		if err != nil {
 			p.fatal(err)
 			return
@@ -392,7 +389,7 @@ func parseCmd(p *parser) (c *Command) {
 	case "v":
 		argv := parseArg(p)
 		c.args = argv
-		re, err :=  regexp.Compile(argv) //p.compileRegexp(argv) 
+		re, err :=     regexp.Compile(argv)// p.compileRegexp(argv)//   regexp.Compile(argv) 
 		if err != nil {
 			p.fatal(err)
 			return
@@ -453,7 +450,7 @@ func parseCmd(p *parser) (c *Command) {
 	case "x":
 		argv := parseArg(p)
 		c.args = argv
-		re, err :=  regexp.Compile(argv) //p.compileRegexp(argv) 
+		re, err :=     regexp.Compile(argv)// p.compileRegexp(argv)//   regexp.Compile(argv) 
 		if err != nil {
 			p.fatal(err)
 			return
@@ -484,7 +481,7 @@ func parseCmd(p *parser) (c *Command) {
 	case "y":
 		argv := parseArg(p)
 		c.args = argv
-		re, err := regexp.Compile(argv) //p.compileRegexp(argv)
+		re, err :=    regexp.Compile(argv)// p.compileRegexp(argv)//   regexp.Compile(argv) 
 		if err != nil {
 			p.fatal(err)
 			return
@@ -593,7 +590,6 @@ func (p *parser) run() {
 			break
 		}
 		p.cmd = append(p.cmd, c)
-		eprint(fmt.Sprintf("(%s) %#v and cmd is %#v\n", tok, p.addr, c))
 		p.Next()
 	}
 	p.stop <- p.err
