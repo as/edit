@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"flag"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"runtime/pprof"
@@ -65,25 +66,21 @@ func interp(buf text.Buffer, rec event.Record) {
 
 func main() {
 	flag.Parse()
-	if len(os.Args) < 2 {
-		log.Fatalln("usage: echo hello | example ,a,world,")
+	in := bufio.NewReader(os.Stdin)
+	out := bufio.NewWriter(os.Stdout)
+	cmd := edit.MustCompile(strings.Join(flag.Args(), " "))
+	data, err := ioutil.ReadAll(in)
+	if err != nil {
+		log.Fatalf("edit: %s", err)
 	}
-	defer trypprof()()
-	in, out := bufio.NewReader(os.Stdin), bufio.NewWriter(os.Stdout)
 
-	ed, err := text.Open(text.NewBuffer())
-	no(err)
+	buf, _ := text.Open(text.BufferFrom(data))
+	if err = cmd.Run(buf); err != nil {
+		log.Fatalln("edit: %s", err)
+	}
 
-	cmd, err := edit.Compile(strings.Join(flag.Args(), " "))
-	no(err)
-
-	_, err = io.Copy(&Writer{ed}, in)
-	no(err)
-
-	cmd.Run(ed)
-	_, err = io.Copy(out, bytes.NewReader(ed.Bytes()))
+	io.Copy(out, bytes.NewReader(buf.Bytes()))
 	out.Flush()
-	no(err)
 }
 
 /*
