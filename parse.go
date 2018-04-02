@@ -450,7 +450,7 @@ func parseCmd(p *parser) (c *Command) {
 	case "x":
 		argv := parseArg(p)
 		c.args = argv
-		re, err := p.compileRegexp(argv)//   regexp.Compile(argv)
+		re, err := p.compileRegexp(argv) //   regexp.Compile(argv)
 		if err != nil {
 			p.fatal(err)
 			return

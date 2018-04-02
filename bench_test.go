@@ -64,18 +64,18 @@ func BenchmarkChange128KBto128KBNest4x2x1(b *testing.B) {
 
 func BenchmarkChange128KBto128KBx16x4x1(b *testing.B) {
 	var bufs []text.Editor
-	for i := 0; i < b.N; i++{
+	for i := 0; i < b.N; i++ {
 		buf, _ := text.Open(text.BufferFrom(append([]byte{}, KB128...)))
 		bufs = append(bufs, buf)
 	}
 	cmd, err := Compile(",x,aaaaaaaaaaaaaaaa,x,aaaa,x,a,c,b,")
-		if err != nil {
-			b.Fatalf("failed: %s\n", err)
-		}
-	
+	if err != nil {
+		b.Fatalf("failed: %s\n", err)
+	}
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		cmd.Run(bufs[i] )
+		cmd.Run(bufs[i])
 	}
 	b.StopTimer()
 }

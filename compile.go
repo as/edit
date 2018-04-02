@@ -26,13 +26,13 @@ type Options struct {
 }
 
 type Command struct {
-	cor  *text.COR
-	fn   func(text.Editor)
-	s    string
-	args string
-	next *Command
-	Emit *Emitted
-	 modified bool
+	cor      *text.COR
+	fn       func(text.Editor)
+	s        string
+	args     string
+	next     *Command
+	Emit     *Emitted
+	modified bool
 }
 
 func MustCompile(s string) (cmd *Command) {
@@ -54,7 +54,7 @@ func Compile(s string, opts ...*Options) (cmd *Command, err error) {
 
 // Modified returns true if the last call to c.Run() modified the contents
 // of the editor
-func (c *Command) Modified() bool{
+func (c *Command) Modified() bool {
 	return c.modified
 }
 
@@ -119,22 +119,22 @@ func (c *Command) Run(ed text.Editor) (err error) {
 	iep := buf.Len()
 	if ins > del {
 		buf.Insert(bytes.Repeat([]byte{0}, int(ins-del)), buf.Len())
-		c.modified=true
+		c.modified = true
 	} else if del > ins {
 		defer buf.Delete(buf.Len()-(del-ins), buf.Len())
-		c.modified=true
+		c.modified = true
 	}
 
 	for i := int64(hist.Len()) - 1; i >= 0; i-- {
 		e, err := hist.ReadAt(i)
 		switch t := e.(type) {
 		case *event.Write:
-		c.modified=true
+			c.modified = true
 			q0 := t.Q0 + ins
 			buf.(io.WriterAt).WriteAt(t.P, q0)
 			iep -= t.Q1 - t.Q0
 		case *event.Insert:
-		c.modified=true
+			c.modified = true
 			isp = t.Q0
 			if i == hist.Len()-1 {
 				ep = t.Q1
@@ -147,7 +147,7 @@ func (c *Command) Run(ed text.Editor) (err error) {
 			iep = isp
 			buf.(io.WriterAt).WriteAt(t.P, q0)
 		case *event.Delete:
-		c.modified=true
+			c.modified = true
 			sp = t.Q1
 			if i == hist.Len()-1 {
 				ep = buf.Len()
