@@ -450,16 +450,17 @@ func parseCmd(p *parser) (c *Command) {
 	case "x":
 		argv := parseArg(p)
 		c.args = argv
-		re, err := regexp.Compile(argv) // p.compileRegexp(argv)//   regexp.Compile(argv)
+		re, err := p.compileRegexp(argv)//   regexp.Compile(argv)
 		if err != nil {
 			p.fatal(err)
 			return
 		}
+		buf := new(bytes.Reader)
 		c.fn = func(f text.Editor) {
 			q0, q1 := f.Dot()
 			x0, x1 := int64(0), int64(0)
 
-			buf := bytes.NewReader(f.Bytes()[q0:q1])
+			buf.Reset(f.Bytes()[q0:q1]) //bytes.NewReader(f.Bytes()[q0:q1])
 			for {
 				loc := re.FindReaderIndex(buf)
 				if loc == nil {
