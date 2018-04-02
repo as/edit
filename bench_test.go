@@ -63,21 +63,21 @@ func BenchmarkChange128KBto128KBNest4x2x1(b *testing.B) {
 }
 
 func BenchmarkChange128KBto128KBx16x4x1(b *testing.B) {
-	buf, _ := text.Open(text.NewBuffer())
-	b.StopTimer()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		buf.Delete(0, buf.Len())
-		buf.Insert(KB128, 0)
-		buf.Select(0, 0)
-		cmd, err := Compile(",x,aaaaaaaaaaaaaaaa,x,aaaa,x,a,c,b,")
+	var bufs []text.Editor
+	for i := 0; i < b.N; i++{
+		buf, _ := text.Open(text.BufferFrom(append([]byte{}, KB128...)))
+		bufs = append(bufs, buf)
+	}
+	cmd, err := Compile(",x,aaaaaaaaaaaaaaaa,x,aaaa,x,a,c,b,")
 		if err != nil {
 			b.Fatalf("failed: %s\n", err)
 		}
-		b.StartTimer()
-		cmd.Run(buf)
-		b.StopTimer()
+	
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		cmd.Run(bufs[i] )
 	}
+	b.StopTimer()
 }
 
 func BenchmarkDelete128KB(b *testing.B) {
