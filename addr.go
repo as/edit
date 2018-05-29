@@ -2,10 +2,11 @@ package edit
 
 import (
 	"bytes"
+	"regexp"
+
 	"github.com/as/io/rev"
 	"github.com/as/text"
 	"github.com/as/text/find"
-	"regexp"
 )
 
 // Address implements Set on the Editor. Possibly selecting

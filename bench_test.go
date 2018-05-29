@@ -2,8 +2,9 @@ package edit
 
 import (
 	"bytes"
-	"github.com/as/text"
 	"testing"
+
+	"github.com/as/text"
 )
 
 var KB128 = bytes.Repeat([]byte("a"), 1024*128)

@@ -21,28 +21,36 @@ func TestExtractChange(t *testing.T) {
 		t.Fatalf("failed: %s\n", err)
 	}
 
-	excerpt := `
-	Here is an example. 
-	Say we wanted to double space the document.
-	That is.
-	Turn every newline
-	Into two newlines.
-	`
+	excerpt := `Here is an example. 
+Say we wanted to double space the document.
+That is.
+Turn every newline
+Into two newlines.
+`
 
-	want := `
+	want := `Here is an example. 
 
-	Here is an example. 
+Say we wanted to double space the document.
 
-	Say we wanted to double space the document.
+That is.
 
-	That is.
+Turn every newline
 
-	Turn every newline
+Into two newlines.
 
-	Into two newlines.
-
-	`
+`
 	x := []tbl{
+		{"abc", `,x,b,a,Q,`, "abQc"},
+		{"aca", `,x,a,a,b,`, "abcab"},
+		{"abbcbbd", `,x,bb,i,Q,`, "aQbbcQbbd"},
+		{"abbcbbd", `,x,bb,i,QQ,`, "aQQbbcQQbbd"}, // break
+		{"abcbd", `,x,b,i,RR,`, "aRRbcRRbd"},
+		{"abcbd", `,x,b,i,SSS,`, "aSSSbcSSSbd"},
+		{"abcbd", `,x,b,i,T,`, "aTbcTbd"}, // break
+		{"abcbd", `,x,b,a,U,`, "abUcbUd"}, // break
+		{excerpt, `,x,\n,a,\n,`, want},
+		{excerpt, `,x/\n/ i/\n/`, want},
+		{excerpt, `,x/\n/ a/\n/`, want},
 		{"", "", ""},
 		{"", ",x,apple,d", ""},
 		{"aaaaaaaaa", ",d", ""},
@@ -87,11 +95,10 @@ func TestExtractChange(t *testing.T) {
 		{"teh teh teh", `,s/teh/the/g`, `the the the`},
 		{"Oh peter", `,s/peter/& & & & &/g`, `Oh peter peter peter peter peter`},
 		{"They", `,s/ey/&&&&&/g`, `Theyeyeyeyey`},
-		//		{excerpt, `,x/\n/ a/\n/`,want},
+		{excerpt, `,x/\n/ a/\n/`, want},
 		//		{excerpt, `,x/\n/ c/\n\n/`,want},
 		//		{excerpt, `,x/$/ a/\n/`,want},
 		//		{excerpt, `,x/^/ i/\n/`,want},
-		{excerpt, `,x/\n+/ a/\n/`, want},
 		//		{tabstop[0], `,x/^/a/ /`,tabstop[1]},
 		//		{tabstop[0], `,x/^/c/ /`,tabstop[1]},
 		//		{tabstop[0], `,x/.*\n/i/ /`,tabstop[1]},

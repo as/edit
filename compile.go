@@ -65,7 +65,6 @@ func (c *Command) Func() func(text.Editor) {
 func interp(buf text.Buffer, rec event.Record, ins, del int) {
 	switch t := rec.(type) {
 	case *event.Write:
-		fmt.Printf("%#v\n", t)
 		switch buf := buf.(type) {
 		case io.WriterAt:
 			buf.WriteAt(t.P, t.Q0)
@@ -74,36 +73,13 @@ func interp(buf text.Buffer, rec event.Record, ins, del int) {
 		buf.Delete(t.Q0, t.Q0+int64(len(t.P)))
 		buf.Insert(t.P, t.Q0)
 	case *event.Insert:
-		fmt.Printf("%#v\n", t)
 		buf.Insert(t.P, t.Q0)
 	case *event.Delete:
-		fmt.Printf("%#v\n", t)
 		buf.Delete(t.Q0, t.Q1)
 	}
 }
 
-// Run runs the compiled program on ed
-func (c *Command) Run(ed text.Editor) (err error) {
-	c.modified = false
-	if ed == nil {
-		return ErrNilEditor
-	}
-	if c.fn == nil {
-		return ErrNilFunc
-	}
-	hist := worm.NewLogger()
-	cor := text.NewCOR(ed, hist)
-	defer cor.Close()
-	q0, q1 := ed.Dot()
-	cor.Select(q0, q1)
-
-	c.Emit.Dot = c.Emit.Dot[:0]
-	c.fn(cor)
-	cor.Flush()
-	q0, q1 = cor.Dot()
-	ed.Select(q0, q1)
-	ins, del := int64(0), int64(0)
-	buf := ed
+func net(hist worm.Logger) (ins, del int64) {
 	for i := int64(0); i < hist.Len(); i++ {
 		t, _ := hist.ReadAt(int64(i))
 		switch t := t.(type) {
@@ -113,48 +89,97 @@ func (c *Command) Run(ed text.Editor) (err error) {
 			del += t.Q1 - t.Q0
 		}
 	}
+	return
+}
+
+type editWriter interface {
+	io.WriterAt
+	text.Editor
+}
+
+func newEditWriter(ed text.Editor) editWriter {
+	switch ed := ed.(type) {
+	case editWriter:
+		return ed
+	}
+	return &ew{Editor: ed}
+}
+
+type ew struct {
+	text.Editor
+}
+
+func (e *ew) WriteAt(p []byte, off int64) (n int, err error) {
+	q0 := off
+	q1 := off + int64(len(p))
+	if q1 > e.Len() {
+		q1 = e.Len()
+	}
+	e.Delete(q0, q1)
+	return e.Insert(p, q0), nil
+}
+
+// Commit plays back the history onto ed, starting from
+// the last event to the first in reverse order. This is
+// useful only when hist contains a set of independent events
+// applied as a transaction where shifts in the address offsets
+// are not observed.
+//
+// If the command is
+//		a,abc,
+//		x,.,a,Q,
+// The result is:
+//		abc -> aQbQcQ
+// The log should contain
+// 		i 1 Q
+// 		i 2 Q	(not i 3 Q)
+// 		i 3 Q (not i 5 Q)
+//
+// Commit will only reallocate ed's size once. If ed implements
+// io.WriterAt, a write-through fast path is used to commit the
+// transaction.
+func Commit(ed text.Editor, hist worm.Logger) (err error) {
+	buf := newEditWriter(ed)
+	ins, del := net(hist)
 	ep := buf.Len()
-	sp := ep
-	isp := sp
-	iep := buf.Len()
+	sp, isp, iep := ep, ep, ep
+
 	if ins > del {
 		buf.Insert(bytes.Repeat([]byte{0}, int(ins-del)), buf.Len())
-		c.modified = true
 	} else if del > ins {
 		defer buf.Delete(buf.Len()-(del-ins), buf.Len())
-		c.modified = true
 	}
 
 	for i := int64(hist.Len()) - 1; i >= 0; i-- {
 		e, err := hist.ReadAt(i)
 		switch t := e.(type) {
 		case *event.Write:
-			c.modified = true
 			q0 := t.Q0 + ins
-			buf.(io.WriterAt).WriteAt(t.P, q0)
+			buf.WriteAt(t.P, q0)
 			iep -= t.Q1 - t.Q0
 		case *event.Insert:
-			c.modified = true
 			isp = t.Q0
 			if i == hist.Len()-1 {
 				ep = t.Q1
 			}
 			if iep > isp {
-				buf.(io.WriterAt).WriteAt(buf.Bytes()[isp:iep], isp+(ins)-del)
+				buf.WriteAt(buf.Bytes()[isp:iep], isp+(ins)-del)
 			}
+
 			ins -= t.Q1 - t.Q0
 			q0 := t.Q0 + ins - del
 			iep = isp
-			buf.(io.WriterAt).WriteAt(t.P, q0)
+
+			buf.WriteAt(t.P, q0)
+
 		case *event.Delete:
-			c.modified = true
 			sp = t.Q1
 			if i == hist.Len()-1 {
 				ep = buf.Len()
 			}
 			delta := ins - (t.Q1 - t.Q0)
 			if ep > sp {
-				buf.(io.WriterAt).WriteAt(buf.Bytes()[sp:ep], sp+delta)
+				buf.WriteAt(buf.Bytes()[sp:ep], sp+delta)
 			}
 			del -= t.Q1 - t.Q0
 			if del == 0 {
@@ -166,6 +191,62 @@ func (c *Command) Run(ed text.Editor) (err error) {
 		}
 	}
 	return err
+}
+
+func (c *Command) ck(ed text.Editor) error {
+	c.modified = false
+	if ed == nil {
+		return ErrNilEditor
+	}
+	if c.fn == nil {
+		return ErrNilFunc
+	}
+	return nil
+}
+
+// Transcribe runs the compiled program on ed
+func (c *Command) Transcribe(ed text.Editor) (log worm.Logger, err error) {
+	if err = c.ck(ed); err != nil {
+		return nil, err
+	}
+	log = worm.NewLogger()
+	cor := text.NewCOR(ed, log)
+	defer cor.Close()
+
+	q0, q1 := ed.Dot()
+	cor.Select(q0, q1)
+
+	c.Emit.Dot = c.Emit.Dot[:0]
+	c.fn(cor)
+	cor.Flush()
+
+	q0, q1 = cor.Dot()
+	ed.Select(q0, q1)
+	return log, nil
+}
+
+// Run runs the compiled program on ed
+func (c *Command) RunTransaction(ed text.Editor) (err error) {
+	hist, err := c.Transcribe(ed)
+	if err != nil {
+		return err
+	}
+	c.modified = hist.Len() > 0
+	return Commit(ed, hist)
+}
+
+// Run runs the compiled program on ed
+func (c *Command) Run(ed text.Editor) (err error) {
+	return c.RunTransaction(ed)
+}
+
+func (c *Command) oldRun(ed text.Editor) (err error) {
+	if err = c.ck(ed); err != nil {
+		return err
+	}
+	c.Emit.Dot = c.Emit.Dot[:0]
+	c.fn(ed)
+	return nil
 }
 
 // Next returns the next instruction for the compiled program. This
