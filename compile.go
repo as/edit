@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"image"
 	"io"
-	"log"
 
 	"github.com/as/event"
 	"github.com/as/text"
@@ -158,23 +156,9 @@ func Commit(ed Editor, hist worm.Logger) (err error) {
 			q0, q1 = t.Q0, t.Q0
 		}
 		delta := ins - del
-		defer func() {
-			buf.Select(q0+delta, q1+delta)
-			return
-			type refresher interface {
-				Size() image.Point
-				Resize(image.Point)
-				Blank()
-			}
-			if ref, ok := ed.(refresher); ok {
-				ref.Blank()
-				ref.Resize(ref.Size())
-			} else {
-				log.Printf("cant refresh #%T\n", ed)
-			}
-			log.Printf("#%T\n", ed)
-		}()
+		defer buf.Select(q0+delta, q1+delta)
 	}
+
 	if ins > del {
 		buf.Insert(bytes.Repeat([]byte{0}, int(ins-del)), buf.Len())
 	} else if del > ins {
