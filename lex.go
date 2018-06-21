@@ -105,7 +105,7 @@ func (l *lexer) run() {
 }
 
 func (l *lexer) accept(valid string) bool {
-	if strings.IndexRune(valid, l.next()) >= 0 {
+	if strings.ContainsRune(valid, l.next()) {
 		return true
 	}
 	l.backup()
@@ -113,7 +113,7 @@ func (l *lexer) accept(valid string) bool {
 }
 
 func (l *lexer) acceptRun(valid string) {
-	for strings.IndexRune(valid, l.next()) >= 0 {
+	for strings.ContainsRune(valid, l.next()) {
 	}
 	l.backup()
 }
@@ -121,7 +121,7 @@ func (l *lexer) acceptRun(valid string) {
 func (l *lexer) acceptUntil(delim string) {
 	lim := 8192
 	i := 0
-	for strings.IndexRune(delim, l.next()) < 0 {
+	for !strings.ContainsRune(delim, l.next()) {
 		i++
 		if i > lim {
 			l.errorf("missing terminating char %q: %q\n", delim, l)

@@ -26,7 +26,6 @@ type Options struct {
 }
 
 type Command struct {
-	cor      *text.COR
 	fn       func(Editor)
 	s        string
 	args     string

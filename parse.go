@@ -64,7 +64,6 @@ func (p *parser) compileRegexp(s string) (re *regexp.Regexp, err error) {
 	return re, nil
 }
 
-
 func parseAddr(p *parser) (a Address) {
 	a0 := parseSimpleAddr(p)
 	p.Next()
@@ -86,7 +85,7 @@ func parseOp(p *parser) (op byte, a Address) {
 		eprint("no value" + v)
 		return
 	}
-	if strings.IndexAny(v, "+-;,") == -1 {
+	if !strings.ContainsAny(v, "+-;,") {
 		//		eprint(fmt.Sprintf("bad op: %q", v))
 	}
 	p.Next()
@@ -297,7 +296,7 @@ func parseCmd(p *parser) (c *Command) {
 				f.Select(q0+x0, q0+x1)
 
 				if i == matchn || matchn == -1 {
-			q0, q1 := f.Dot()
+					q0, q1 := f.Dot()
 					buf := replProg.Gen(f.Bytes()[q0:q1])
 					f.Delete(q0, q1)
 					f.Insert(buf, q0)
@@ -419,7 +418,7 @@ func parseCmd(p *parser) (c *Command) {
 		}
 		return
 	case "x":
-		re, err := regexp.Compile(parseArg(p)) 
+		re, err := regexp.Compile(parseArg(p))
 		if err != nil {
 			p.fatal(err)
 			return
