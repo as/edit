@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"image"
 	"io"
+	"log"
 
 	"github.com/as/event"
 	"github.com/as/text"
@@ -144,6 +146,35 @@ func Commit(ed Editor, hist worm.Logger) (err error) {
 	ep := buf.Len()
 	sp, isp, iep := ep, ep, ep
 
+	if last := hist.Len() - 1; last >= 0 {
+		e, _ := hist.ReadAt(last)
+		q0, q1 := int64(0), int64(0)
+		switch t := e.(type) {
+		case *event.Write:
+			q0, q1 = t.Q0, t.Q1
+		case *event.Insert:
+			q0, q1 = t.Q0, t.Q1
+		case *event.Delete:
+			q0, q1 = t.Q0, t.Q0
+		}
+		delta := ins - del
+		defer func() {
+			buf.Select(q0+delta, q1+delta)
+			return
+			type refresher interface {
+				Size() image.Point
+				Resize(image.Point)
+				Blank()
+			}
+			if ref, ok := ed.(refresher); ok {
+				ref.Blank()
+				ref.Resize(ref.Size())
+			} else {
+				log.Printf("cant refresh #%T\n", ed)
+			}
+			log.Printf("#%T\n", ed)
+		}()
+	}
 	if ins > del {
 		buf.Insert(bytes.Repeat([]byte{0}, int(ins-del)), buf.Len())
 	} else if del > ins {
