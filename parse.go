@@ -22,14 +22,13 @@ type Emitted struct {
 }
 
 type parser struct {
+	cmd       []*Command
+	last, tok item
 	in        chan item
 	out       chan func()
-	last, tok item
 	err       error
 	stop      chan error
-	cmd       []*Command
 	addr      Address
-	//q         int64
 
 	recache map[string]*regexp.Regexp
 
@@ -65,7 +64,7 @@ func (p *parser) compileRegexp(s string) (re *regexp.Regexp, err error) {
 	return re, nil
 }
 
-// Put
+
 func parseAddr(p *parser) (a Address) {
 	a0 := parseSimpleAddr(p)
 	p.Next()
@@ -154,10 +153,7 @@ func parseArg(p *parser) (arg string) {
 }
 
 func (p *parser) Dot(f Editor) (q0, q1 int64) {
-	q0, q1 = f.Dot()
-	//q0+= p.q
-	//q1+= p.q
-	return
+	return f.Dot()
 }
 
 type Sender interface {
@@ -174,7 +170,7 @@ func parseCmd(p *parser) (c *Command) {
 	case "h":
 		parseArg(p)
 		c.fn = func(f Editor) {
-			q0, q1 := p.Dot(f)
+			q0, q1 := f.Dot()
 			p.Emit.Dot = append(p.Emit.Dot, Dot{q0, q1})
 		}
 		return
@@ -183,7 +179,7 @@ func parseCmd(p *parser) (c *Command) {
 			return
 		}
 		c.fn = func(f Editor) {
-			q0, q1 := p.Dot(f)
+			q0, q1 := f.Dot()
 			str := fmt.Sprintf("%s:#%d,#%d", p.Options.Origin, q0+1, q1)
 			p.Options.Sender.Send(Print(str))
 		}
@@ -301,12 +297,10 @@ func parseCmd(p *parser) (c *Command) {
 				f.Select(q0+x0, q0+x1)
 
 				if i == matchn || matchn == -1 {
-					q0, q1 := p.Dot(f)
+			q0, q1 := f.Dot()
 					buf := replProg.Gen(f.Bytes()[q0:q1])
 					f.Delete(q0, q1)
 					f.Insert(buf, q0)
-					//p.q -= q1 - q0
-					//p.q += int64(len(buf))
 				}
 
 				buf.Seek(x1, 0)
@@ -425,7 +419,7 @@ func parseCmd(p *parser) (c *Command) {
 		}
 		return
 	case "x":
-		re, err := regexp.Compile(parseArg(p)) //p.compileRegexp(parseArg(p)) //   regexp.Compile(parseArg(p))
+		re, err := regexp.Compile(parseArg(p)) 
 		if err != nil {
 			p.fatal(err)
 			return
