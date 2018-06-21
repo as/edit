@@ -5,15 +5,24 @@ import (
 	"regexp"
 
 	"github.com/as/io/rev"
-	"github.com/as/text"
 	"github.com/as/text/find"
 )
+
+type Editor interface {
+	Insert(p []byte, at int64) (n int)
+	Delete(q0, q1 int64) (n int)
+	Select(q0, q1 int64)
+	Dot() (q0, q1 int64)
+	Len() int64
+	Bytes() []byte
+	Close() error
+}
 
 // Address implements Set on the Editor. Possibly selecting
 // some range of text (a dot).
 type Address interface {
 	// Set computes and sets the address on the provided Editor
-	Set(f text.Editor)
+	Set(f Editor)
 	// Back returns true if the address semantics should be executed in reverse
 	Back() bool
 }
@@ -59,7 +68,7 @@ func (l Line) Back() bool     { return l.rel == -1 }
 func (d Dot) Back() bool      { return false }
 func (c Compound) Back() bool { return c.a1.Back() }
 
-func (c *Compound) Set(f text.Editor) {
+func (c *Compound) Set(f Editor) {
 	if c.a0 == nil {
 		return
 	}
@@ -77,7 +86,7 @@ func (c *Compound) Set(f text.Editor) {
 	f.Select(q0, r1)
 }
 
-func (b *Byte) Set(f text.Editor) {
+func (b *Byte) Set(f Editor) {
 	q0, q1 := f.Dot()
 	q := b.Q
 	if b.rel == -1 {
@@ -88,7 +97,7 @@ func (b *Byte) Set(f text.Editor) {
 		f.Select(q-1, q)
 	}
 }
-func (r *Regexp) Set(f text.Editor) {
+func (r *Regexp) Set(f Editor) {
 	_, q1 := f.Dot()
 	org := q1
 	buf := bytes.NewReader(f.Bytes()[q1:])
@@ -103,7 +112,7 @@ func (r *Regexp) Set(f text.Editor) {
 	f.Select(r0, r1)
 }
 
-func (r *Line) Set(f text.Editor) {
+func (r *Line) Set(f Editor) {
 	p := f.Bytes()
 	switch r.rel {
 	case 0:
@@ -139,6 +148,6 @@ func (r *Line) Set(f text.Editor) {
 	}
 }
 
-func (Dot) Set(f text.Editor) {
+func (Dot) Set(f Editor) {
 	// TODO
 }

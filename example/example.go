@@ -29,7 +29,7 @@ func no(err error) {
 }
 
 type Writer struct {
-	text.Editor
+	edit.Editor
 }
 
 func (w *Writer) Write(p []byte) (n int, err error) {

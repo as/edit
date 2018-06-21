@@ -17,7 +17,7 @@ var (
 )
 
 var (
-	noop = func(ed text.Editor) {}
+	noop = func(ed Editor) {}
 )
 
 type Options struct {
@@ -27,7 +27,7 @@ type Options struct {
 
 type Command struct {
 	cor      *text.COR
-	fn       func(text.Editor)
+	fn       func(Editor)
 	s        string
 	args     string
 	next     *Command
@@ -58,8 +58,8 @@ func (c *Command) Modified() bool {
 	return c.modified
 }
 
-// Func returns a function entry point that operates on a text.Editor
-func (c *Command) Func() func(text.Editor) {
+// Func returns a function entry point that operates on a Editor
+func (c *Command) Func() func(Editor) {
 	return c.fn
 }
 func interp(buf text.Buffer, rec event.Record, ins, del int) {
@@ -94,10 +94,10 @@ func net(hist worm.Logger) (ins, del int64) {
 
 type editWriter interface {
 	io.WriterAt
-	text.Editor
+	Editor
 }
 
-func newEditWriter(ed text.Editor) editWriter {
+func newEditWriter(ed Editor) editWriter {
 	switch ed := ed.(type) {
 	case editWriter:
 		return ed
@@ -106,17 +106,18 @@ func newEditWriter(ed text.Editor) editWriter {
 }
 
 type ew struct {
-	text.Editor
+	Editor
 }
 
 func (e *ew) WriteAt(p []byte, off int64) (n int, err error) {
-	q0 := off
-	q1 := off + int64(len(p))
-	if q1 > e.Len() {
-		q1 = e.Len()
-	}
-	e.Delete(q0, q1)
-	return e.Insert(p, q0), nil
+	panic("not implemented")
+	//	q0 := off
+	//	q1 := off + int64(len(p))
+	//	if q1 > e.Len() {
+	//		q1 = e.Len()
+	//	}
+	//	e.Delete(q0, q1)
+	//	return e.Insert(p, q0), nil
 }
 
 // Commit plays back the history onto ed, starting from
@@ -138,7 +139,7 @@ func (e *ew) WriteAt(p []byte, off int64) (n int, err error) {
 // Commit will only reallocate ed's size once. If ed implements
 // io.WriterAt, a write-through fast path is used to commit the
 // transaction.
-func Commit(ed text.Editor, hist worm.Logger) (err error) {
+func Commit(ed Editor, hist worm.Logger) (err error) {
 	buf := newEditWriter(ed)
 	ins, del := net(hist)
 	ep := buf.Len()
@@ -193,7 +194,7 @@ func Commit(ed text.Editor, hist worm.Logger) (err error) {
 	return err
 }
 
-func (c *Command) ck(ed text.Editor) error {
+func (c *Command) ck(ed Editor) error {
 	c.modified = false
 	if ed == nil {
 		return ErrNilEditor
@@ -205,7 +206,7 @@ func (c *Command) ck(ed text.Editor) error {
 }
 
 // Transcribe runs the compiled program on ed
-func (c *Command) Transcribe(ed text.Editor) (log worm.Logger, err error) {
+func (c *Command) Transcribe(ed Editor) (log worm.Logger, err error) {
 	if err = c.ck(ed); err != nil {
 		return nil, err
 	}
@@ -226,7 +227,7 @@ func (c *Command) Transcribe(ed text.Editor) (log worm.Logger, err error) {
 }
 
 // Run runs the compiled program on ed
-func (c *Command) RunTransaction(ed text.Editor) (err error) {
+func (c *Command) RunTransaction(ed Editor) (err error) {
 	hist, err := c.Transcribe(ed)
 	if err != nil {
 		return err
@@ -236,11 +237,11 @@ func (c *Command) RunTransaction(ed text.Editor) (err error) {
 }
 
 // Run runs the compiled program on ed
-func (c *Command) Run(ed text.Editor) (err error) {
+func (c *Command) Run(ed Editor) (err error) {
 	return c.RunTransaction(ed)
 }
 
-func (c *Command) oldRun(ed text.Editor) (err error) {
+func (c *Command) oldRun(ed Editor) (err error) {
 	if err = c.ck(ed); err != nil {
 		return err
 	}
@@ -255,14 +256,14 @@ func (c *Command) Next() *Command {
 	return c.next
 }
 
-func (c *Command) nextFn() func(f text.Editor) {
+func (c *Command) nextFn() func(f Editor) {
 	if c.next == nil {
 		return nil
 	}
 	return c.next.fn
 }
 
-func compileAddr(a Address) func(f text.Editor) {
+func compileAddr(a Address) func(f Editor) {
 	if a == nil {
 		return noop
 	}
@@ -276,7 +277,7 @@ func compile(p *parser) (cmd *Command) {
 		}
 		p.cmd[i].next = p.cmd[i+1]
 	}
-	fn := func(f text.Editor) {
+	fn := func(f Editor) {
 		addr := compileAddr(p.addr)
 		if addr != nil {
 			addr(f)

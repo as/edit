@@ -12,7 +12,7 @@ var KB128 = bytes.Repeat([]byte("a"), 1024*128)
 func BenchmarkChange128KBto64KB(b *testing.B) {
 	buf, _ := text.Open(text.NewBuffer())
 	b.StopTimer()
-	b.SetBytes(int64(len(KB128)*1))
+	b.SetBytes(int64(len(KB128) * 1))
 	b.ResetTimer()
 	cmd, err := Compile(",x,a,c,aa,")
 	for i := 0; i < b.N; i++ {
@@ -31,7 +31,7 @@ func BenchmarkChange128KBto64KB(b *testing.B) {
 func BenchmarkChange128KBto128KB(b *testing.B) {
 	buf, _ := text.Open(text.NewBuffer())
 	b.StopTimer()
-	b.SetBytes(int64(len(KB128)*1))
+	b.SetBytes(int64(len(KB128) * 1))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buf.Delete(0, buf.Len())
@@ -51,7 +51,7 @@ func BenchmarkChange128KBto128KBNest4x2x1(b *testing.B) {
 	buf, _ := text.Open(text.NewBuffer())
 	b.StopTimer()
 	b.ResetTimer()
-	b.SetBytes(int64(len(KB128)*1))
+	b.SetBytes(int64(len(KB128) * 1))
 	for i := 0; i < b.N; i++ {
 		buf.Delete(0, buf.Len())
 		buf.Insert(KB128, 0)
@@ -87,7 +87,7 @@ func BenchmarkChange128KBto128KBx16x4x1(b *testing.B) {
 func BenchmarkDelete128KB(b *testing.B) {
 	buf, _ := text.Open(text.NewBuffer())
 	b.StopTimer()
-	b.SetBytes(int64(len(KB128)*1))
+	b.SetBytes(int64(len(KB128) * 1))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buf.Delete(0, buf.Len())
@@ -106,7 +106,7 @@ func BenchmarkDelete128KB(b *testing.B) {
 func BenchmarkDelete128KBx64(b *testing.B) {
 	buf, _ := text.Open(text.NewBuffer())
 	b.StopTimer()
-	b.SetBytes(int64(len(KB128)*1))
+	b.SetBytes(int64(len(KB128) * 1))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buf.Delete(0, buf.Len())
@@ -125,7 +125,7 @@ func BenchmarkDelete128KBx64(b *testing.B) {
 func BenchmarkDelete128KBx8(b *testing.B) {
 	buf, _ := text.Open(text.NewBuffer())
 	b.StopTimer()
-	b.SetBytes(int64(len(KB128)*1))
+	b.SetBytes(int64(len(KB128) * 1))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buf.Delete(0, buf.Len())
@@ -144,7 +144,7 @@ func BenchmarkDelete128KBx8(b *testing.B) {
 func BenchmarkDelete128KBx1(b *testing.B) {
 	buf, _ := text.Open(text.NewBuffer())
 	b.StopTimer()
-	b.SetBytes(int64(len(KB128)*1))
+	b.SetBytes(int64(len(KB128) * 1))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buf.Delete(0, buf.Len())
@@ -162,7 +162,7 @@ func BenchmarkDelete128KBx1(b *testing.B) {
 func BenchmarkDelete256KBx1(b *testing.B) {
 	buf, _ := text.Open(text.NewBuffer())
 	b.StopTimer()
-	b.SetBytes(int64(len(KB128)*2))
+	b.SetBytes(int64(len(KB128) * 2))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		buf.Delete(0, buf.Len())
@@ -182,7 +182,7 @@ func BenchmarkDelete512KBx1(b *testing.B) {
 	buf, _ := text.Open(text.NewBuffer())
 	b.StopTimer()
 	b.ResetTimer()
-	b.SetBytes(int64(len(KB128)*4))
+	b.SetBytes(int64(len(KB128) * 4))
 	for i := 0; i < b.N; i++ {
 		buf.Delete(0, buf.Len())
 		buf.Insert(KB128, 0)
