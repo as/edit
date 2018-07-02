@@ -1,7 +1,6 @@
 package edit
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -61,22 +60,6 @@ func (c *Command) Modified() bool {
 func (c *Command) Func() func(Editor) {
 	return c.fn
 }
-func interp(buf text.Buffer, rec event.Record, ins, del int) {
-	switch t := rec.(type) {
-	case *event.Write:
-		switch buf := buf.(type) {
-		case io.WriterAt:
-			buf.WriteAt(t.P, t.Q0)
-			return
-		}
-		buf.Delete(t.Q0, t.Q0+int64(len(t.P)))
-		buf.Insert(t.P, t.Q0)
-	case *event.Insert:
-		buf.Insert(t.P, t.Q0)
-	case *event.Delete:
-		buf.Delete(t.Q0, t.Q1)
-	}
-}
 
 func net(hist worm.Logger) (ins, del int64) {
 	for i := int64(0); i < hist.Len(); i++ {
@@ -89,34 +72,6 @@ func net(hist worm.Logger) (ins, del int64) {
 		}
 	}
 	return
-}
-
-type editWriter interface {
-	io.WriterAt
-	Editor
-}
-
-func newEditWriter(ed Editor) editWriter {
-	switch ed := ed.(type) {
-	case editWriter:
-		return ed
-	}
-	return &ew{Editor: ed}
-}
-
-type ew struct {
-	Editor
-}
-
-func (e *ew) WriteAt(p []byte, off int64) (n int, err error) {
-	panic("not implemented")
-	//	q0 := off
-	//	q1 := off + int64(len(p))
-	//	if q1 > e.Len() {
-	//		q1 = e.Len()
-	//	}
-	//	e.Delete(q0, q1)
-	//	return e.Insert(p, q0), nil
 }
 
 // Commit plays back the history onto ed, starting from
@@ -139,70 +94,24 @@ func (e *ew) WriteAt(p []byte, off int64) (n int, err error) {
 // io.WriterAt, a write-through fast path is used to commit the
 // transaction.
 func Commit(ed Editor, hist worm.Logger) (err error) {
-	buf := newEditWriter(ed)
-	ins, del := net(hist)
-	ep := buf.Len()
-	sp, isp, iep := ep, ep, ep
-
-	if last := hist.Len() - 1; last >= 0 {
-		e, _ := hist.ReadAt(last)
-		q0, q1 := int64(0), int64(0)
-		switch t := e.(type) {
-		case *event.Write:
-			q0, q1 = t.Q0, t.Q1
-		case *event.Insert:
-			q0, q1 = t.Q0, t.Q1
-		case *event.Delete:
-			q0, q1 = t.Q0, t.Q0
-		}
-		delta := ins - del
-		defer buf.Select(q0+delta, q1+delta)
-	}
-
-	if ins > del {
-		buf.Insert(bytes.Repeat([]byte{0}, int(ins-del)), buf.Len())
-	} else if del > ins {
-		defer buf.Delete(buf.Len()-(del-ins), buf.Len())
-	}
-
+	//	log.Printf("commit: content: %q", ed.Bytes())
+	_, del := net(hist)
 	for i := int64(hist.Len()) - 1; i >= 0; i-- {
 		e, err := hist.ReadAt(i)
+		if err != nil {
+			return err
+		}
 		switch t := e.(type) {
 		case *event.Write:
-			q0 := t.Q0 + ins
-			buf.WriteAt(t.P, q0)
-			iep -= t.Q1 - t.Q0
+			ed.(io.WriterAt).WriteAt(t.P, t.Q0)
+			//			log.Printf("event[%d]: %#v\n", i, e)
 		case *event.Insert:
-			isp = t.Q0
-			if i == hist.Len()-1 {
-				ep = t.Q1
-			}
-			if iep > isp {
-				buf.WriteAt(buf.Bytes()[isp:iep], isp+(ins)-del)
-			}
-
-			ins -= t.Q1 - t.Q0
-			q0 := t.Q0 + ins - del
-			iep = isp
-
-			buf.WriteAt(t.P, q0)
-
+			ed.Insert(t.P, t.Q0+del)
+			//			log.Printf("event[%d]: %#v\n", i, e)
 		case *event.Delete:
-			sp = t.Q1
-			if i == hist.Len()-1 {
-				ep = buf.Len()
-			}
-			delta := ins - (t.Q1 - t.Q0)
-			if ep > sp {
-				buf.WriteAt(buf.Bytes()[sp:ep], sp+delta)
-			}
-			del -= t.Q1 - t.Q0
-			if del == 0 {
-				ep = sp + delta
-			}
-		}
-		if err != nil {
-			break
+			del -= int64(t.Q1 - t.Q0)
+			ed.Delete(t.Q0, t.Q1)
+			//			log.Printf("event[%d]: %#v\n", i, e)
 		}
 	}
 	return err
@@ -225,18 +134,9 @@ func (c *Command) Transcribe(ed Editor) (log worm.Logger, err error) {
 		return nil, err
 	}
 	log = worm.NewLogger()
-	cor := text.NewCOR(ed, log)
-	defer cor.Close()
-
-	q0, q1 := ed.Dot()
-	cor.Select(q0, q1)
-
+	hist := text.NewHistory(&Recorder{ed}, log)
 	c.Emit.Dot = c.Emit.Dot[:0]
-	c.fn(cor)
-	cor.Flush()
-
-	q0, q1 = cor.Dot()
-	ed.Select(q0, q1)
+	c.fn(hist)
 	return log, nil
 }
 

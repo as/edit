@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
-	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -193,67 +191,32 @@ func parseCmd(p *parser) (c *Command) {
 			p.Options.Sender.Send(Print(str))
 		}
 		return
-	case "a", "i":
-		b := []byte(parseArg(p))
-		c.fn = func(f Editor) {
-			q0, q1 := p.Dot(f)
-			if v == "i" {
-				f.Insert(b, q0)
-			} else {
-				f.Insert(b, q1)
-			}
-			//			p.q += int64(len(b))
-		}
+	case "a":
+		c.fn = Append{Data: []byte(parseArg(p))}.Apply
+		return
+	case "i":
+		c.fn = Insert{Data: []byte(parseArg(p))}.Apply
 		return
 	case "c":
-		b := []byte(parseArg(p))
-		c.fn = func(f Editor) {
-			q0, q1 := p.Dot(f)
-			f.Delete(q0, q1)
-			f.Insert(b, q0)
-			//p.q += int64(len(b)) - (q1 - q0)
-		}
+		c.fn = Change{To: []byte(parseArg(p))}.Apply
 		return
 	case "d":
-		c.fn = func(f Editor) {
-			q0, q1 := p.Dot(f)
-			f.Delete(q0, q1)
-			//p.q -= q1 - q0
-		}
+		c.fn = Delete{}.Apply
 		return
 	case "e":
 	case "k":
 	case "r":
-		filename := parseArg(p)
-		c.fn = func(f Editor) {
-			data, err := ioutil.ReadFile(filename)
-			if err != nil {
-				eprint(err)
-				return
-			}
-			q0, q1 := f.Dot()
-			if q0 != q1 {
-				f.Delete(q0, q1)
-			}
-			f.Insert(data, q0)
-		}
+		c.fn = ReadFile{Name: parseArg(p)}.Apply
 		return
 	case "s":
+
 		matchn := int64(1)
-		sre := ""
-		parseArg(p)
-		a1 := p.tok
-		if a1.kind == kindCount {
-			matchn = p.mustatoi(a1.value)
-			parseArg(p)
-			a2 := p.tok
-			sre = a2.value
-		} else {
-			sre = a1.value
+		sre := parseArg(p)
+		if p.tok.kind == kindCount {
+			matchn = p.mustatoi(sre)
+			sre = parseArg(p)
 		}
-		parseArg(p)
-		a3 := p.tok
-		replProg := compileReplaceAmp(a3.value)
+		replamp := compileReplaceAmp(parseArg(p))
 
 		// And at this point I realized that instead
 		// of a one token look-ahead parser, I have
@@ -262,10 +225,9 @@ func parseCmd(p *parser) (c *Command) {
 		// TODO(as): check for 'g' here after fixing the parser
 		// try parsing the last part of the construction anyway
 		// and look for 'g'
-		parseArg(p)
-		if p.tok.kind == kindGlobal {
-			if p.tok.value != "g" {
-				p.fatal("s: suffix not supported: " + p.tok.value)
+		if g := parseArg(p); p.tok.kind == kindGlobal {
+			if g != "g" {
+				p.fatal("s: suffix not supported: " + g)
 				return
 			}
 			matchn = -1
@@ -280,49 +242,14 @@ func parseCmd(p *parser) (c *Command) {
 			p.fatal(err)
 			return
 		}
-		c.fn = func(f Editor) {
-			q0, q1 := f.Dot()
-			x0, x1 := int64(0), int64(0)
-
-			buf := bytes.NewReader(f.Bytes()[q0:q1])
-			for i := int64(1); ; i++ {
-				loc := re.FindReaderIndex(buf)
-				if loc == nil {
-					buf.Seek(x1, 0)
-					eprint("not found")
-					break
-				}
-				x0, x1 = int64(loc[0])+x1, int64(loc[1])+x1
-				f.Select(q0+x0, q0+x1)
-
-				if i == matchn || matchn == -1 {
-					q0, q1 := f.Dot()
-					buf := replProg.Gen(f.Bytes()[q0:q1])
-					f.Delete(q0, q1)
-					f.Insert(buf, q0)
-				}
-
-				buf.Seek(x1, 0)
-			}
-			f.Select(q0, q1)
-		}
+		c.fn = S{
+			Regexp:     re,
+			ReplaceAmp: replamp,
+			Limit:      matchn,
+		}.Apply
 		return
-
 	case "w":
-		filename := parseArg(p)
-		c.fn = func(f Editor) {
-			fd, err := os.Create(filename)
-			if err != nil {
-				eprint(err)
-				return
-			}
-			defer fd.Close()
-			q0, q1 := f.Dot()
-			_, err = io.Copy(fd, bytes.NewReader(f.Bytes()[q0:q1]))
-			if err != nil {
-				eprint(err)
-			}
-		}
+		c.fn = WriteFile{Name: parseArg(p)}.Apply
 		return
 	case "m":
 		a1 := parseSimpleAddr(p)
@@ -376,30 +303,7 @@ func parseCmd(p *parser) (c *Command) {
 		}
 		return
 	case "|":
-		argv := parseArg(p)
-		c.fn = func(f Editor) {
-			x := strings.Fields(argv)
-			if len(x) == 0 {
-				eprint("|: nothing on rhs")
-			}
-			n := x[0]
-			var a []string
-			if len(x) > 1 {
-				a = x[1:]
-			}
-			q0, q1 := f.Dot()
-			cmd := exec.Command(n, a...)
-			cmd.Stdin = bytes.NewReader(append([]byte{}, f.Bytes()[q0:q1]...))
-			buf := new(bytes.Buffer)
-			cmd.Stdout = buf
-			err := cmd.Run()
-			if err != nil {
-				eprint(err)
-			}
-			f.Delete(q0, q1)
-			f.Insert(buf.Bytes(), q0)
-
-		}
+		c.fn = Pipe{To: parseArg(p)}.Apply
 		return
 	case ">":
 		filename := parseArg(p)
@@ -425,26 +329,29 @@ func parseCmd(p *parser) (c *Command) {
 		}
 		buf := new(bytes.Reader)
 		c.fn = func(f Editor) {
-			q0, q1 := f.Dot()
-			x0, x1 := int64(0), int64(0)
 
-			buf.Reset(f.Bytes()[q0:q1])
+			sp, ep := f.Dot()
+			buf.Reset(f.Bytes()[sp:ep])
+			q0 := int64(0)
 			for {
 				loc := re.FindReaderIndex(buf)
 				if loc == nil {
-					buf.Seek(x1, 0)
-					eprint("not found")
 					break
 				}
-				x0, x1 = int64(loc[0])+x1, int64(loc[1])+x1
-
-				f.Select(q0+x0, q0+x1)
+				q1 := q0 + int64(loc[1])
+				q0 += int64(loc[0])
+				//				log.Printf("match: %q location (%d,%d)", f.Bytes()[sp+q0:sp+q1], sp+q0, sp+q1)
+				f.Select(sp+q0, sp+q1)
 				if nextfn := c.nextFn(); nextfn != nil {
 					nextfn(f)
 				}
-				buf.Seek(x1, 0)
+				q0 = q1
+				buf.Seek(q0, 0)
+				if sp+q0 == ep {
+					break
+				}
 			}
-			f.Select(q0, q1)
+			f.Select(ep, ep)
 		}
 		return
 	case "y":

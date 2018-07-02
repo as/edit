@@ -94,7 +94,7 @@ func (b *Byte) Set(f Editor) {
 	} else if b.rel == 1 {
 		f.Select(q+q1, q+q1)
 	} else {
-		f.Select(q-1, q)
+		f.Select(q, q)
 	}
 }
 func (r *Regexp) Set(f Editor) {
@@ -148,6 +148,6 @@ func (r *Line) Set(f Editor) {
 	}
 }
 
-func (Dot) Set(f Editor) {
-	// TODO
+func (d Dot) Set(f Editor) {
+	f.Select(d.Q0, d.Q1)
 }
