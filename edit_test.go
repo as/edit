@@ -30,11 +30,10 @@ func TestDot(t *testing.T) {
 	cmd.Run(ed)
 	want := "one 1oze1 2one2"
 	have := string(ed.Bytes())
-			if have != want{
-				t.Fatalf("have: %q\nwant: %q\n", have, want)
-			}
-	
-	
+	if have != want {
+		t.Fatalf("have: %q\nwant: %q\n", have, want)
+	}
+
 }
 
 func TestInsertAppend(t *testing.T) {

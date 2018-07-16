@@ -149,5 +149,5 @@ func (r *Line) Set(f Editor) {
 }
 
 func (d Dot) Set(f Editor) {
-	f.Select(d.Q0, d.Q1)
+	//f.Select(d.Q0, d.Q1)
 }
