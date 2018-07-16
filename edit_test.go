@@ -16,6 +16,27 @@ var tabstop = []string{"A more common example\nis indenting a block of text\nby 
 	"A more common example\n\tis indenting a block of text\n\tby a tab stop.",
 }
 
+func TestDot(t *testing.T) {
+	ed, err := text.Open(text.NewBuffer())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ed.Insert([]byte("one 1one1 2one2"), 0)
+	ed.Select(4, 10)
+	cmd, err := Compile(`x,n,c,z,`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.Run(ed)
+	want := "one 1oze1 2one2"
+	have := string(ed.Bytes())
+			if have != want{
+				t.Fatalf("have: %q\nwant: %q\n", have, want)
+			}
+	
+	
+}
+
 func TestInsertAppend(t *testing.T) {
 	ed, err := text.Open(text.NewBuffer())
 	if err != nil {
