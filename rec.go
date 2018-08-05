@@ -6,6 +6,9 @@ type Recorder struct {
 	Editor
 }
 
+func (r *Recorder) Write(p []byte) (int, error) {
+	return len(p), nil
+}
 func (r *Recorder) WriteAt(p []byte, at int64) (int, error) {
 	return len(p), nil
 }
