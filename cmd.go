@@ -86,7 +86,7 @@ func (c WriteFile) Apply(ed Editor) {
 
 func (c Pipe) Apply(ed Editor) {
 	x := strings.Fields(c.To)
-	if len(x) == 0 {
+	if len(x) == 0 || x[0] == "" {
 		eprint("|: nothing on rhs")
 	}
 	n := x[0]
@@ -103,8 +103,7 @@ func (c Pipe) Apply(ed Editor) {
 	if err != nil {
 		eprint(err)
 	}
-	ed.Delete(q0, q1)
-	ed.Insert(buf.Bytes(), q0)
+	Change{To: buf.Bytes()}.Apply(ed)
 }
 func (c S) Apply(ed Editor) {
 	sp, ep := ed.Dot()
